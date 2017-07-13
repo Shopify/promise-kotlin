@@ -1,0 +1,8 @@
+.gradle
+/.idea
+*.iml
+build
+local.properties
+generated
+.DS_Store
+Main.kt
