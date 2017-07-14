@@ -9,7 +9,7 @@ Promises as a pattern is well known in JS world, but it's not so popular among A
 ### Features 
 This implementation of `Promise` provides next key-features:
 
-- promises are "cold" by default, that means you must explicitly subscribe in order to start task execution
+- promises are "cold" by default, what means until you explicitly subscribe to this promise task won't be executed
 - implemented in monadic way: it's super easy to extend and introduce own custom behaviour with `bind` operation
 - micro framework: very light weight implementation that offers only core functionality but at the same time flexible enough to extend
 - implementation synchronization lock free: uses CAS/atomic operations internally
@@ -24,37 +24,54 @@ Let's imagine that we want to fetch user by id with repositories, below example 
     Promise<User, IOException> {
       val fetchUser: Call = userService.fetchUserById(userId)
       doOnCancel {
+        // when Promise.cancel() is called this action will be performed
+        // to give you a chance cancel task execution and clean up resources
         fetchUser.cancel()
       }
 
       fetchUser.enqueue(object : Callback {
         override fun onFailure(e: IOException) {
+          // notify promise about error
           onError(e)
         }
 
         override fun onResponse(response: User) {
+          // notify promise about success
           onSuccess(response)
         }
       })
     }
   }.then { user ->
+    // chain another promise that will be executed when previous one
+    // resolved with success
     Promise<List<Repo>, IOException> {
       val fetchUserRepositories: Call = repoService.fetchUserRepositories(user.id)
       doOnCancel {
+        // when Promise.cancel() is called this action will be performed
+        // to give you a chance cancel task execution and clean up resources
+        // any chained promises will get a chance to cancel their task
+        // if they alread started execution
         fetchUserRepositories.cancel()
       }
 
       fetchUserRepositories.enqueue(object : Callback {
         override fun onFailure(e: IOException) {
+          // notify promise about error
           onError(e)
         }
 
         override fun onResponse(response: List<Repo>) {
+          // notify promise about success
           onSuccess(response)
         }
       })
-    }.map { repositories -> user to repositories }
+    }.map { 
+      // chain implicitly new promise with transformation function
+      repositories -> user to repositories 
+    }
 }.whenComplete {
+  // subscribe to pipeline of chained promises
+  // this call will kick-off promise task execution
   when (it) {
     is Promise.Result.Success -> println("User: ${it.value.first} repositories: ${it.value.second}")
     is Promise.Result.Error -> println("Yay, error: ${it.error.message}")
