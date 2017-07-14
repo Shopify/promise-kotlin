@@ -1,4 +1,4 @@
-#Promises.kt
+# Promises.kt
 
 Promises as a pattern is well known in JS world, but it's not so popular among Android folks, maybe because of fact that we have very powerful RxJava library. But what if you use RxJava just for a single value response (`Single`) such as single network request you probably don't need all the features offered by Rx except two: `flatMap` and `map`. If this is the case then you should consider promises pattern that works well for single value response.
 
