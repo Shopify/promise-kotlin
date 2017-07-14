@@ -71,14 +71,13 @@ Let's imagine that we want to fetch user by id with repositories, below example 
     }
 }.whenComplete {
   // subscribe to pipeline of chained promises
-  // this call will kick-off promise task execution
+  // this call will kick-off promise execution
   when (it) {
     is Promise.Result.Success -> println("User: ${it.value.first} repositories: ${it.value.second}")
     is Promise.Result.Error -> println("Yay, error: ${it.error.message}")
   }
 }
 ```
-
 
 ## Usage 
 `Promise` is super easy to use, you should treat them as a task that suppose to be executed sometime in the future and it promises either be resolved successfully or fail.
@@ -153,33 +152,56 @@ You can call as many `whenComplete` on the same promise as you want, all will be
 Now the best part, you can build a chain or pipeline of promises by using: `then`, `map`, `errorThen`, `mapError`:
 
 ```kotlin
-Promise<String, RuntimeException> {
-  ...
-}.map {
-  it.toLong()
-}.then {
-  Promise<User, IOException> {
-    val fetchUserByIdCall = null
-    doOnCancel {
-      fetchUserByIdCall.cancel()
-    }
+Promise.ofSuccess<Long, IOException>(100)
+  .then { userId ->
+    Promise<User, IOException> {
+      val fetchUser: Call = userService.fetchUserById(userId)
+      doOnCancel {
+        // when Promise.cancel() is called this action will be performed
+        // to give you a chance cancel task execution and clean up resources
+        fetchUser.cancel()
+      }
 
-    val user = try {
-      fetchUserByIdCall.execute() // long running job
-    } catch (e: IOException) {
-      onError(e)
-      return@Promise
-    }
+      fetchUser.enqueue(object : Callback {
+        override fun onFailure(e: IOException) {
+          // notify promise about error
+          onError(e)
+        }
 
-    onSuccess(user)
-  }.mapError { 
-    RuntimeException(it)
-  }
-}.whenComplete { result: Promise.Result<User, RuntimeException> ->
-  when (result) {
-    is Promise.Result.Success -> println("User : ${result.value}")
-    is Promise.Result.Error -> println("Yay, error: ${result.error.message}")
-  }
+        override fun onResponse(response: User) {
+          // notify promise about success
+          onSuccess(response)
+        }
+      })
+    }
+  }.then { user ->
+    // chain another promise that will be executed when previous one
+    // resolved with success
+    Promise<List<Repo>, IOException> {
+      val fetchUserRepositories: Call = repoService.fetchUserRepositories(user.id)
+      doOnCancel {
+        // when Promise.cancel() is called this action will be performed
+        // to give you a chance cancel task execution and clean up resources
+        // any chained promises will get a chance to cancel their task
+        // if they alread started execution
+        fetchUserRepositories.cancel()
+      }
+
+      fetchUserRepositories.enqueue(object : Callback {
+        override fun onFailure(e: IOException) {
+          // notify promise about error
+          onError(e)
+        }
+
+        override fun onResponse(response: List<Repo>) {
+          // notify promise about success
+          onSuccess(response)
+        }
+      })
+    }.map { 
+      // chain implicitly new promise with transformation function
+      repositories -> user to repositories 
+    }
 }
 ```
 
