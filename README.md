@@ -1,6 +1,6 @@
 # Promises.kt
 
-Promises as a pattern is well known in JS world, but it's not so popular among Android folks, maybe because of fact that we have very powerful RxJava library. But what if you use RxJava just for a single value response (`Single`) such as single network request you probably don't need all the features offered by Rx except two: `flatMap` and `map`. If this is the case then you should consider promises pattern that works well for single value response.
+Promises as a pattern is well known in JS world, but it's not so popular among Android folks, maybe because of the fact that we have very powerful RxJava library. But what if you need RxJava just for a single value response (`Single`) such as single network request you probably don't need all the features offered by Rx except two: `flatMap` and `map`. If this is the case then you should consider promises pattern that works well for single value response.
 
 [Wiki](https://en.wikipedia.org/wiki/Futures_and_promises) defines Promises pattern as: 
 
@@ -9,14 +9,15 @@ Promises as a pattern is well known in JS world, but it's not so popular among A
 ### Features 
 This implementation of `Promise` provides next key-features:
 
-- promises are "cold" by default, what means until you explicitly subscribe to this promise task won't be executed
-- implemented in monadic way: it's super easy to extend and introduce own custom behaviour with `bind` operation
+- promises are "cold" by default, what means until you explicitly subscribe promise task won't be executed
+- implemented as a monad, defines `bind` operator that provides extentsion point for new custom operators
 - micro framework: very light weight implementation that offers only core functionality but at the same time flexible enough to extend
-- implementation synchronization lock free: uses CAS/atomic operations internally
+- synchronization lock free, uses CAS/atomic operations only
 - built on Kotlin
 
 ## Quick Start
-Let's imagine that we want to fetch user by id with repositories, below example demonstrates how it can be solved with promises:
+
+As a quick start let's imagine the next scenario, we want to fetch user by id first and then fetch his repositories. Below example that demonstrates how it can be solved with promises:
 
 ```kotlin
  Promise.ofSuccess<Long, IOException>(100)
@@ -80,7 +81,7 @@ Let's imagine that we want to fetch user by id with repositories, below example 
 ```
 
 ## Usage 
-`Promise` is super easy to use, you should treat them as a task that suppose to be executed sometime in the future and it promises either be resolved successfully or fail.
+`Promise` is super easy to use, you should treat them as a task that suppose to be executed sometime in the future but it won't be started unless you subscribe and it promises either be successfully resolved or failed.
 
 
 ### Create promise
