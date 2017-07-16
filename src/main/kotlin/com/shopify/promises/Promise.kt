@@ -171,7 +171,7 @@ class Promise<T, E> private constructor(state: State<T, E>) {
   fun cancel() {
     do {
       val oldState = state.get().let {
-        if (it !is State.Idle && it !is State.InProgress) return else it
+        if (it is State.Cancelled ) return else it
       }
       val newState = State.Cancelled<T, E>()
       if (state.compareAndSet(oldState, newState)) {
