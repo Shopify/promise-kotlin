@@ -110,40 +110,6 @@ class Promise<T, E> private constructor(state: State<T, E>) {
   )
 
   /**
-   * Specify action to be performed when this [Promise] succeed
-   *
-   * **NOTE: this call does not start promise task execution.**
-   *
-   * @param action to be performed
-   * @return [Promise]`<T, E>`
-   */
-  fun onSuccess(action: PromiseSuccessAction<T>): Promise<T, E> {
-    appendCallback {
-      if (it is Result.Success) {
-        action(it.value)
-      }
-    }
-    return this
-  }
-
-  /**
-   * Specify action to be performed when this [Promise] failed
-   *
-   * **NOTE: this call does not start promise task execution.**
-   *
-   * @param action to be performed
-   * @return [Promise]`<T, E>`
-   */
-  fun onError(action: PromiseErrorAction<E>): Promise<T, E> {
-    appendCallback {
-      if (it is Promise.Result.Error) {
-        action(it.error)
-      }
-    }
-    return this
-  }
-
-  /**
    * Start promise task execution
    *
    * Result will be delivered via [PromiseCallback].
@@ -171,7 +137,7 @@ class Promise<T, E> private constructor(state: State<T, E>) {
   fun cancel() {
     do {
       val oldState = state.get().let {
-        if (it is State.Cancelled ) return else it
+        if (it is State.Cancelled) return else it
       }
       val newState = State.Cancelled<T, E>()
       if (state.compareAndSet(oldState, newState)) {
