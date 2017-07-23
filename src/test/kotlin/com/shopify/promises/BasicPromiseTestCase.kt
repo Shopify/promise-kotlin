@@ -38,95 +38,84 @@ class BasicPromiseTestCase {
   }
 
   @Test fun static_value() {
-    Promise.of("Done")
-      .whenComplete {
-        assertThat(it).isInstanceOf(Promise.Result.Success::class.java)
-        with(it as Promise.Result.Success) {
-          assertThat(value).isEqualTo("Done")
-        }
-      }
-
-    Promise.ofSuccess<String, RuntimeException>("Done")
-      .whenComplete {
-        assertThat(it).isInstanceOf(Promise.Result.Success::class.java)
-        with(it as Promise.Result.Success) {
-          assertThat(value).isEqualTo("Done")
-        }
-      }
-
-    Promise.ofError<String, RuntimeException>(RuntimeException("failed"))
-      .whenComplete {
-        assertThat(it).isInstanceOf(Promise.Result.Error::class.java)
-        with(it as Promise.Result.Error) {
-          assertThat(error.message).isEqualTo("failed")
-        }
-      }
-  }
-
-  @Test fun simple_task_promise() {
-    Promise<String, RuntimeException> {
-      onSuccess("Done")
-    }.whenComplete {
-      assertThat(it).isInstanceOf(Promise.Result.Success::class.java)
-      with(it as Promise.Result.Success) {
-        assertThat(value).isEqualTo("Done")
-      }
+    Promise.of("Done").validateSuccess("Done")
+    Promise.ofSuccess<String, RuntimeException>("Done").validateSuccess("Done")
+    with(RuntimeException("failed")) {
+      Promise.ofError<String, RuntimeException>(this).validateError(this)
     }
+    Promise<String, RuntimeException> { onSuccess("Done") }.validateSuccess("Done")
   }
 
-  @Test fun map() {
+  @Test fun map_same_type() {
     Promise<String, RuntimeException> {
       onSuccess("Done")
-    }.map {
-      assertThat(it).isEqualTo("Done")
+    }.validateMap("Done") {
       "Done!"
-    }.whenComplete {
-      assertThat(it).isInstanceOf(Promise.Result.Success::class.java)
-      with(it as Promise.Result.Success) {
-        assertThat(value).isEqualTo("Done!")
-      }
-    }
+    }.validateSuccess("Done!")
   }
 
-  @Test fun then() {
+  @Test fun map_different_type() {
     Promise<String, RuntimeException> {
       onSuccess("Done")
-    }.then {
+    }.validateMap("Done") {
+      true
+    }.validateSuccess(true)
+  }
+
+  @Test fun then_same_type() {
+    Promise<String, RuntimeException> {
+      onSuccess("Done")
+    }.validateThen("Done") {
       Promise.ofSuccess<String, RuntimeException>("Done!")
-    }.whenComplete {
-      assertThat(it).isInstanceOf(Promise.Result.Success::class.java)
-      with(it as Promise.Result.Success) {
-        assertThat(value).isEqualTo("Done!")
-      }
-    }
+    }.validateSuccess("Done!")
   }
 
-  @Test fun map_error() {
+  @Test fun then_different_type() {
     Promise<String, RuntimeException> {
-      onError(RuntimeException("failed"))
-    }.mapError {
-      assertThat(it.message).isEqualTo("failed")
-      RuntimeException("failed!")
-    }.whenComplete {
-      assertThat(it).isInstanceOf(Promise.Result.Error::class.java)
-      with(it as Promise.Result.Error) {
-        assertThat(error.message).isEqualTo("failed!")
-      }
-    }
+      onSuccess("Done")
+    }.validateThen("Done") {
+      Promise.ofSuccess<Boolean, RuntimeException>(true)
+    }.validateSuccess(true)
   }
 
-  @Test fun error_then() {
+  @Test fun map_error_same_type() {
+    val error1 = RuntimeException("failed")
+    val error2 = RuntimeException("failed!")
     Promise<String, RuntimeException> {
-      onError(RuntimeException("failed"))
-    }.errorThen {
-      assertThat(it.message).isEqualTo("failed")
-      Promise.ofError<String, RuntimeException>(RuntimeException("failed!"))
-    }.whenComplete {
-      assertThat(it).isInstanceOf(Promise.Result.Error::class.java)
-      with(it as Promise.Result.Error) {
-        assertThat(error.message).isEqualTo("failed!")
-      }
-    }
+      onError(error1)
+    }.validateMapError(error1) {
+      error2
+    }.validateError(error2)
+  }
+
+  @Test fun map_error_different_type() {
+    val error1 = RuntimeException("failed")
+    val error2 = IOException("failed!")
+    Promise<String, RuntimeException> {
+      onError(error1)
+    }.validateMapError(error1) {
+      error2
+    }.validateError(error2)
+  }
+
+  @Test fun error_then_same_type() {
+    val error1 = RuntimeException("failed")
+    val error2 = RuntimeException("failed!")
+    Promise<String, RuntimeException> {
+      onError(error1)
+    }.validateErrorThen(error1) {
+      Promise.ofError<String, RuntimeException>(error2)
+    }.validateError(error2)
+  }
+
+  @Test fun error_then_different_type() {
+    val error1 = RuntimeException("failed")
+    val error2 = IOException("failed!")
+    Promise<String, RuntimeException> {
+      onError(error1)
+    }.validateErrorThen(error1) {
+      Promise.ofError<String, IOException>(error2)
+    }.validateError(error2)
   }
 
   @Test fun on_start() {
@@ -136,17 +125,17 @@ class BasicPromiseTestCase {
       onSuccess("Done")
     }.onStart {
       onStart = true
-    }.whenComplete {}
+    }.validateSuccess("Done") {
+      assertThat(onStart).isTrue()
+    }
   }
 
   @Test fun on_start_static_value() {
     var onStart = false
     Promise
       .of("Done")
-      .onStart {
-        onStart = true
-      }
-      .whenComplete {
+      .onStart { onStart = true }
+      .validateSuccess("Done") {
         assertThat(onStart).isTrue()
       }
   }
@@ -157,7 +146,7 @@ class BasicPromiseTestCase {
       onSuccess("Done")
     }.onSuccess {
       onSuccess = true
-    }.whenComplete {
+    }.validateSuccess("Done") {
       assertThat(onSuccess).isTrue()
     }
   }
@@ -168,7 +157,7 @@ class BasicPromiseTestCase {
       onSuccess("Done")
     }.onSuccess {
       onSuccess = true
-    }.whenComplete {
+    }.validateSuccess("Done") {
       assertThat(onSuccess).isTrue()
     }
   }
@@ -190,41 +179,37 @@ class BasicPromiseTestCase {
   }
 
   @Test fun all_success() {
-    Promise.all(
-      Promise<String, RuntimeException> {
-        onSuccess("a")
-      },
-      Promise<String, RuntimeException> {
-        onSuccess("b")
-      },
-      Promise<String, RuntimeException> {
-        onSuccess("c")
-      }
-    ).whenComplete {
-      when (it) {
-        is Promise.Result.Success -> assertThat(it.value.contentToString()).isEqualTo("[a, b, c]")
-        is Promise.Result.Error -> fail("Expected success")
-      }
-    }
+    Promise
+      .all(
+        Promise<String, RuntimeException> {
+          onSuccess("a")
+        },
+        Promise<String, RuntimeException> {
+          onSuccess("b")
+        },
+        Promise<String, RuntimeException> {
+          onSuccess("c")
+        }
+      )
+      .map { it.contentToString() }
+      .validateSuccess("[a, b, c]")
   }
 
   @Test fun all_error() {
-    Promise.all(
-      Promise<String, RuntimeException> {
-        onSuccess("a")
-      },
-      Promise<String, RuntimeException> {
-        onError(RuntimeException("Failed"))
-      },
-      Promise<String, RuntimeException> {
-        onSuccess("c")
-      }
-    ).whenComplete {
-      when (it) {
-        is Promise.Result.Success -> fail("Expected failure")
-        is Promise.Result.Error -> assertThat(it.error.message).isEqualTo("Failed")
-      }
-    }
+    val error = RuntimeException("Failed")
+    Promise
+      .all(
+        Promise<String, RuntimeException> {
+          onSuccess("a")
+        },
+        Promise<String, RuntimeException> {
+          onError(error)
+        },
+        Promise<String, RuntimeException> {
+          onSuccess("c")
+        }
+      )
+      .validateError(error)
   }
 
   @Test fun all_heterogeneous_2() {
@@ -235,15 +220,7 @@ class BasicPromiseTestCase {
       Promise<Long, RuntimeException> {
         onSuccess(1)
       }
-    ).whenComplete {
-      when (it) {
-        is Promise.Result.Success -> {
-          assertThat(it.value.value1).isEqualTo("a")
-          assertThat(it.value.value2).isEqualTo(1)
-        }
-        is Promise.Result.Error -> fail("Expected success")
-      }
-    }
+    ).validateSuccess(Tuple<String, Long>("a", 1))
   }
 
   @Test fun all_heterogeneous_3() {
@@ -257,16 +234,7 @@ class BasicPromiseTestCase {
       Promise<Boolean, RuntimeException> {
         onSuccess(true)
       }
-    ).whenComplete {
-      when (it) {
-        is Promise.Result.Success -> {
-          assertThat(it.value.value1).isEqualTo("a")
-          assertThat(it.value.value2).isEqualTo(1)
-          assertThat(it.value.value3).isTrue()
-        }
-        is Promise.Result.Error -> fail("Expected success")
-      }
-    }
+    ).validateSuccess(Tuple3<String, Long, Boolean>("a", 1, true))
   }
 
   @Test fun all_heterogeneous_4() {
@@ -283,17 +251,7 @@ class BasicPromiseTestCase {
       Promise<Double, RuntimeException> {
         onSuccess(1.5)
       }
-    ).whenComplete {
-      when (it) {
-        is Promise.Result.Success -> {
-          assertThat(it.value.value1).isEqualTo("a")
-          assertThat(it.value.value2).isEqualTo(1)
-          assertThat(it.value.value3).isTrue()
-          assertThat(it.value.value4).isWithin(1.5)
-        }
-        is Promise.Result.Error -> fail("Expected success")
-      }
-    }
+    ).validateSuccess(Tuple4<String, Long, Boolean, Double>("a", 1, true, 1.5))
   }
 
   @Test fun any() {
@@ -307,18 +265,14 @@ class BasicPromiseTestCase {
       Promise<String, RuntimeException> {
         onSuccess("c")
       }
-    ).whenComplete {
-      when (it) {
-        is Promise.Result.Success -> assertThat(it.value).isEqualTo("a")
-        is Promise.Result.Error -> fail("Expected success")
-      }
-    }
+    ).validateSuccess("a")
   }
 
   @Test fun any_error() {
+    val error = RuntimeException("Failed")
     Promise.any(
       Promise<String, RuntimeException> {
-        onError(RuntimeException("Failed"))
+        onError(error)
       },
       Promise<String, RuntimeException> {
         onSuccess("b")
@@ -326,11 +280,65 @@ class BasicPromiseTestCase {
       Promise<String, RuntimeException> {
         onSuccess("c")
       }
-    ).whenComplete {
+    ).validateError(error)
+  }
+
+  private fun <T, T1, E> Promise<T, E>.validateMap(expected: T, transform: (T) -> T1): Promise<T1, E> {
+    return map {
+      assertThat(it).isEqualTo(expected)
+      transform(it)
+    }
+  }
+
+  private fun <T, T1, E> Promise<T, E>.validateThen(expected: T, transform: (T) -> Promise<T1, E>): Promise<T1, E> {
+    return then {
+      assertThat(it).isEqualTo(expected)
+      transform(it)
+    }
+  }
+
+  private fun <T, E, E1> Promise<T, E>.validateMapError(expected: E, transform: (E) -> E1): Promise<T, E1> {
+    return mapError {
+      assertThat(it).isEqualTo(expected)
+      transform(it)
+    }
+  }
+
+  private fun <T, E, E1> Promise<T, E>.validateErrorThen(expected: E, transform: (E) -> Promise<T, E1>): Promise<T, E1> {
+    return errorThen {
+      assertThat(it).isEqualTo(expected)
+      transform(it)
+    }
+  }
+
+  private fun <T, E> Promise<T, E>.validateSuccess(expected: T, onComplete: (Promise.Result<T, E>) -> Unit = {}) {
+    validateWhenComplete(this, Promise.Result.Success(expected), onComplete)
+  }
+
+  private fun <T, E> Promise<T, E>.validateError(expected: E, onComplete: (Promise.Result<T, E>) -> Unit = {}) {
+    validateWhenComplete(this, Promise.Result.Error(expected), onComplete)
+  }
+
+  private fun <T, E> validateWhenComplete(promise: Promise<T, E>, expected: Promise.Result<T, E>, onComplete: (Promise.Result<T, E>) -> Unit = {}) {
+    promise.whenComplete {
       when (it) {
-        is Promise.Result.Success -> fail("Expected failure")
-        is Promise.Result.Error -> assertThat(it.error.message).isEqualTo("Failed")
+        is Promise.Result.Success -> {
+          if (expected is Promise.Result.Success) {
+            assertThat(it.value).isEqualTo(expected.value)
+          } else {
+            fail("Promise expected to fail")
+          }
+        }
+        is Promise.Result.Error -> {
+          if (expected is Promise.Result.Error) {
+            assertThat(it.error).isEqualTo(expected.error)
+          } else {
+            fail("Promise expected to succeed")
+          }
+        }
       }
+
+      onComplete(it)
     }
   }
 }
