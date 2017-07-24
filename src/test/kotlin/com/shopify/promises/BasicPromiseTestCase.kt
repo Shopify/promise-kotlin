@@ -140,6 +140,27 @@ class BasicPromiseTestCase {
       }
   }
 
+  @Test fun on_start_nested() {
+    var onStart1 = false
+    var onStart2 = false
+    Promise<String, RuntimeException> {
+      assertThat(onStart1).isTrue()
+      assertThat(onStart2).isFalse()
+      onSuccess("Done")
+    }.then {
+      Promise<String, RuntimeException> {
+        assertThat(onStart1).isTrue()
+        assertThat(onStart2).isTrue()
+        onSuccess("Done!")
+      }.onStart { onStart2 = true }
+    }.onStart {
+      onStart1 = true
+    }.validateSuccess("Done!") {
+      assertThat(onStart1).isTrue()
+      assertThat(onStart2).isTrue()
+    }
+  }
+
   @Test fun on_success() {
     var onSuccess = false
     Promise<String, RuntimeException> {
