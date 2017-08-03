@@ -1,23 +1,30 @@
-# Promises.kt
+# Promise.kt
 
-Promises as a pattern is well known in JS world, but it's not so popular among Android folks, maybe because of the fact that we have very powerful RxJava library. But what if you need RxJava just for a single value response (`Single`) such as single network request you probably don't need all the features offered by Rx except two: `flatMap` and `map`. If this is the case then you should consider promises pattern that works well for single value response.
+`Promise` as a pattern is well known in JS world, but it's not so popular among Android folks, maybe because of the fact that we have very powerful `RxJava` library. 
+But what if you need `RxJava` just for a single value response (`Single`) such as single network request and couple transformation operation like: `flatMap` and `map`. If this is the case then you should consider `Promise` pattern that works well for single value response.
+
+### What is Promise ?
 
 [Wiki](https://en.wikipedia.org/wiki/Futures_and_promises) defines Promises pattern as: 
 
 > Promise refer to constructs used for synchronizing program execution in some concurrent programming languages. They describe an object that acts as a proxy for a result that is initially unknown, usually because the computation of its value is yet incomplete.
 
+Technically, it's a wrapper for an async function with result returned via callback. Besides being an async computation wrapper, `Promise` can also act as [continuation monad](https://en.wikipedia.org/wiki/Monad_(functional_programming)#Continuation_monad) opening up a new way of solving many problems related to async computations.
+
 ### Features 
 This implementation of `Promise` provides next key-features:
 
-- promises are "cold" by default, what means until you explicitly subscribe promise task won't be executed
-- implemented as a monad, defines `bind` operator that provides extentsion point for new custom operators
-- micro framework: very light weight implementation that offers only core functionality but at the same time flexible enough to extend
+- cold by default, what means until you explicitly subscribe to it via `whenComplete` task won't be executed
+- cached, once value computed subsequent calls to `whenComplete` will not trigger async computation again.
+- parameterized with both value and error: `Promise<Int, Error>`
+- implemented as a continuation monad, defines `bind` operator that provides extension point for new custom operators
+- very light weight implementation that offers only core functionality but at the same time flexible enough to extend
 - synchronization lock free, uses CAS/atomic operations only
 - built on Kotlin
 
 ## Quick Start
 
-As a quick start let's imagine the next scenario, we want to fetch user by id first and then fetch his repositories. Below example that demonstrates how it can be solved with promises:
+As a quick start let's imagine the next scenario, we want to fetch user by id first and then fetch user's repositories. Below example that demonstrates how it can be solved with `Promise`:
 
 ```kotlin
  Promise.ofSuccess<Long, IOException>(100)
