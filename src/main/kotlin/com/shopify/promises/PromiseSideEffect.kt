@@ -28,13 +28,13 @@ package com.shopify.promises
 /**
  * Register action to be performed before executing this [Promise]
  *
- * @param block action to be performed `() -> Unit`
+ * @param block to be performed `() -> Unit`
  * @return [Promise]`<T, E>`
  */
 inline fun <T, E> Promise<T, E>.onStart(crossinline block: () -> Unit): Promise<T, E> {
   return Promise<Unit, Nothing> {
     block()
-    onSuccess(Unit)
+    resolve(Unit)
   }
     .promoteError<Unit, E>()
     .then { this }
@@ -45,10 +45,10 @@ inline fun <T, E> Promise<T, E>.onStart(crossinline block: () -> Unit): Promise<
  *
  * **NOTE: this call does not start promise task execution.**
  *
- * @param action to be performed
+ * @param block to be performed
  * @return [Promise]`<T, E>`
  */
-inline fun <T, E> Promise<T, E>.onSuccess(crossinline block: (T) -> Unit): Promise<T, E> {
+inline fun <T, E> Promise<T, E>.onResolve(crossinline block: (T) -> Unit): Promise<T, E> {
   return then {
     block(it)
     Promise.ofSuccess<T, E>(it)
@@ -60,10 +60,10 @@ inline fun <T, E> Promise<T, E>.onSuccess(crossinline block: (T) -> Unit): Promi
  *
  * **NOTE: this call does not start promise task execution.**
  *
- * @param action to be performed
+ * @param block to be performed
  * @return [Promise]`<T, E>`
  */
-inline fun <T, E> Promise<T, E>.onError(crossinline block: (E) -> Unit): Promise<T, E> {
+inline fun <T, E> Promise<T, E>.onReject(crossinline block: (E) -> Unit): Promise<T, E> {
   return errorThen {
     block(it)
     Promise.ofError<T, E>(it)

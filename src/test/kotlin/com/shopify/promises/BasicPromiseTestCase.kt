@@ -43,12 +43,12 @@ class BasicPromiseTestCase {
     with(RuntimeException("failed")) {
       Promise.ofError<String, RuntimeException>(this).validateError(this)
     }
-    Promise<String, RuntimeException> { onSuccess("Done") }.validateSuccess("Done")
+    Promise<String, RuntimeException> { resolve("Done") }.validateSuccess("Done")
   }
 
   @Test fun map_same_type() {
     Promise<String, RuntimeException> {
-      onSuccess("Done")
+      resolve("Done")
     }.validateMap("Done") {
       "Done!"
     }.validateSuccess("Done!")
@@ -56,7 +56,7 @@ class BasicPromiseTestCase {
 
   @Test fun map_different_type() {
     Promise<String, RuntimeException> {
-      onSuccess("Done")
+      resolve("Done")
     }.validateMap("Done") {
       true
     }.validateSuccess(true)
@@ -64,7 +64,7 @@ class BasicPromiseTestCase {
 
   @Test fun then_same_type() {
     Promise<String, RuntimeException> {
-      onSuccess("Done")
+      resolve("Done")
     }.validateThen("Done") {
       Promise.ofSuccess<String, RuntimeException>("Done!")
     }.validateSuccess("Done!")
@@ -72,7 +72,7 @@ class BasicPromiseTestCase {
 
   @Test fun then_different_type() {
     Promise<String, RuntimeException> {
-      onSuccess("Done")
+      resolve("Done")
     }.validateThen("Done") {
       Promise.ofSuccess<Boolean, RuntimeException>(true)
     }.validateSuccess(true)
@@ -82,7 +82,7 @@ class BasicPromiseTestCase {
     val error1 = RuntimeException("failed")
     val error2 = RuntimeException("failed!")
     Promise<String, RuntimeException> {
-      onError(error1)
+      reject(error1)
     }.validateMapError(error1) {
       error2
     }.validateError(error2)
@@ -92,7 +92,7 @@ class BasicPromiseTestCase {
     val error1 = RuntimeException("failed")
     val error2 = IOException("failed!")
     Promise<String, RuntimeException> {
-      onError(error1)
+      reject(error1)
     }.validateMapError(error1) {
       error2
     }.validateError(error2)
@@ -102,7 +102,7 @@ class BasicPromiseTestCase {
     val error1 = RuntimeException("failed")
     val error2 = RuntimeException("failed!")
     Promise<String, RuntimeException> {
-      onError(error1)
+      reject(error1)
     }.validateErrorThen(error1) {
       Promise.ofError<String, RuntimeException>(error2)
     }.validateError(error2)
@@ -112,7 +112,7 @@ class BasicPromiseTestCase {
     val error1 = RuntimeException("failed")
     val error2 = IOException("failed!")
     Promise<String, RuntimeException> {
-      onError(error1)
+      reject(error1)
     }.validateErrorThen(error1) {
       Promise.ofError<String, IOException>(error2)
     }.validateError(error2)
@@ -122,7 +122,7 @@ class BasicPromiseTestCase {
     var onStart = false
     Promise<String, RuntimeException> {
       assertThat(onStart).isTrue()
-      onSuccess("Done")
+      resolve("Done")
     }.onStart {
       onStart = true
     }.validateSuccess("Done") {
@@ -146,12 +146,12 @@ class BasicPromiseTestCase {
     Promise<String, RuntimeException> {
       assertThat(onStart1).isTrue()
       assertThat(onStart2).isFalse()
-      onSuccess("Done")
+      resolve("Done")
     }.then {
       Promise<String, RuntimeException> {
         assertThat(onStart1).isTrue()
         assertThat(onStart2).isTrue()
-        onSuccess("Done!")
+        resolve("Done!")
       }.onStart { onStart2 = true }
     }.onStart {
       onStart1 = true
@@ -164,8 +164,8 @@ class BasicPromiseTestCase {
   @Test fun on_success() {
     var onSuccess = false
     Promise<String, RuntimeException> {
-      onSuccess("Done")
-    }.onSuccess {
+      resolve("Done")
+    }.onResolve {
       onSuccess = true
     }.validateSuccess("Done") {
       assertThat(onSuccess).isTrue()
@@ -175,8 +175,8 @@ class BasicPromiseTestCase {
   @Test fun on_success_static_value() {
     var onSuccess = false
     Promise<String, RuntimeException> {
-      onSuccess("Done")
-    }.onSuccess {
+      resolve("Done")
+    }.onResolve {
       onSuccess = true
     }.validateSuccess("Done") {
       assertThat(onSuccess).isTrue()
@@ -185,7 +185,7 @@ class BasicPromiseTestCase {
 
   @Test fun ignore_error() {
     Promise<String, RuntimeException> {
-      onError(RuntimeException())
+      reject(RuntimeException())
     }.ignoreError().whenComplete {
       fail("Should never be resolved")
     }
@@ -203,13 +203,13 @@ class BasicPromiseTestCase {
     Promise
       .all(
         Promise<String, RuntimeException> {
-          onSuccess("a")
+          resolve("a")
         },
         Promise<String, RuntimeException> {
-          onSuccess("b")
+          resolve("b")
         },
         Promise<String, RuntimeException> {
-          onSuccess("c")
+          resolve("c")
         }
       )
       .map { it.contentToString() }
@@ -221,13 +221,13 @@ class BasicPromiseTestCase {
     Promise
       .all(
         Promise<String, RuntimeException> {
-          onSuccess("a")
+          resolve("a")
         },
         Promise<String, RuntimeException> {
-          onError(error)
+          reject(error)
         },
         Promise<String, RuntimeException> {
-          onSuccess("c")
+          resolve("c")
         }
       )
       .validateError(error)
@@ -236,10 +236,10 @@ class BasicPromiseTestCase {
   @Test fun all_heterogeneous_2() {
     Promise.all(
       Promise<String, RuntimeException> {
-        onSuccess("a")
+        resolve("a")
       },
       Promise<Long, RuntimeException> {
-        onSuccess(1)
+        resolve(1)
       }
     ).validateSuccess(Tuple<String, Long>("a", 1))
   }
@@ -247,13 +247,13 @@ class BasicPromiseTestCase {
   @Test fun all_heterogeneous_3() {
     Promise.all(
       Promise<String, RuntimeException> {
-        onSuccess("a")
+        resolve("a")
       },
       Promise<Long, RuntimeException> {
-        onSuccess(1)
+        resolve(1)
       },
       Promise<Boolean, RuntimeException> {
-        onSuccess(true)
+        resolve(true)
       }
     ).validateSuccess(Tuple3<String, Long, Boolean>("a", 1, true))
   }
@@ -261,16 +261,16 @@ class BasicPromiseTestCase {
   @Test fun all_heterogeneous_4() {
     Promise.all(
       Promise<String, RuntimeException> {
-        onSuccess("a")
+        resolve("a")
       },
       Promise<Long, RuntimeException> {
-        onSuccess(1)
+        resolve(1)
       },
       Promise<Boolean, RuntimeException> {
-        onSuccess(true)
+        resolve(true)
       },
       Promise<Double, RuntimeException> {
-        onSuccess(1.5)
+        resolve(1.5)
       }
     ).validateSuccess(Tuple4<String, Long, Boolean, Double>("a", 1, true, 1.5))
   }
@@ -278,13 +278,13 @@ class BasicPromiseTestCase {
   @Test fun any() {
     Promise.any(
       Promise<String, RuntimeException> {
-        onSuccess("a")
+        resolve("a")
       },
       Promise<String, RuntimeException> {
-        onSuccess("b")
+        resolve("b")
       },
       Promise<String, RuntimeException> {
-        onSuccess("c")
+        resolve("c")
       }
     ).validateSuccess("a")
   }
@@ -293,13 +293,13 @@ class BasicPromiseTestCase {
     val error = RuntimeException("Failed")
     Promise.any(
       Promise<String, RuntimeException> {
-        onError(error)
+        reject(error)
       },
       Promise<String, RuntimeException> {
-        onSuccess("b")
+        resolve("b")
       },
       Promise<String, RuntimeException> {
-        onSuccess("c")
+        resolve("c")
       }
     ).validateError(error)
   }

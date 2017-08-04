@@ -89,9 +89,9 @@ class SchedulingTestCase {
     val latch = CountDownLatch(1)
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
-    Promise<String, RuntimeException> { onSuccess("Done") }
+    Promise<String, RuntimeException> { resolve("Done") }
       .completeOn(Executors.newSingleThreadExecutor())
-      .onSuccess {
+      .onResolve {
         threadRef.set(Thread.currentThread())
         latch.countDown()
       }
@@ -105,8 +105,8 @@ class SchedulingTestCase {
   @Test fun on_success_in_main() {
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
-    Promise<String, RuntimeException> { onSuccess("Done") }
-      .onSuccess { threadRef.set(Thread.currentThread()) }
+    Promise<String, RuntimeException> { resolve("Done") }
+      .onResolve { threadRef.set(Thread.currentThread()) }
       .completeOn(Executors.newSingleThreadExecutor())
       .whenComplete { }
 
@@ -117,9 +117,9 @@ class SchedulingTestCase {
     val latch = CountDownLatch(1)
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
-    Promise<String, RuntimeException> { onError(RuntimeException()) }
+    Promise<String, RuntimeException> { reject(RuntimeException()) }
       .completeOn(Executors.newSingleThreadExecutor())
-      .onError {
+      .onReject {
         threadRef.set(Thread.currentThread())
         latch.countDown()
       }
@@ -133,8 +133,8 @@ class SchedulingTestCase {
   @Test fun on_error_in_main() {
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
-    Promise<String, RuntimeException> { onError(RuntimeException()) }
-      .onError { threadRef.set(Thread.currentThread()) }
+    Promise<String, RuntimeException> { reject(RuntimeException()) }
+      .onReject { threadRef.set(Thread.currentThread()) }
       .completeOn(Executors.newSingleThreadExecutor())
       .whenComplete { }
 
@@ -145,7 +145,7 @@ class SchedulingTestCase {
     val latch = CountDownLatch(1)
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
-    Promise<String, RuntimeException> { onSuccess("Done") }
+    Promise<String, RuntimeException> { resolve("Done") }
       .completeOn(Executors.newSingleThreadExecutor())
       .whenComplete {
         threadRef.set(Thread.currentThread())
@@ -160,7 +160,7 @@ class SchedulingTestCase {
   @Test fun when_complete_in_main() {
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
-    Promise<String, RuntimeException> { onSuccess("Done") }
+    Promise<String, RuntimeException> { resolve("Done") }
       .whenComplete {
         threadRef.set(Thread.currentThread())
       }
@@ -174,7 +174,7 @@ class SchedulingTestCase {
     val whenCompleteThreadRef = AtomicReference<Thread>()
     Promise<String, RuntimeException> {
       taskThreadRef.set(Thread.currentThread())
-      onSuccess("Done")
+      resolve("Done")
       latch.countDown()
     }
       .startOn(Executors.newSingleThreadExecutor())
@@ -196,12 +196,12 @@ class SchedulingTestCase {
     val whenCompleteThreadRef = AtomicReference<Thread>()
     Promise<String, RuntimeException> {
       task1ThreadRef.set(Thread.currentThread())
-      onSuccess("Done")
+      resolve("Done")
       latch.countDown()
     }.then {
       Promise<String, RuntimeException> {
         task2ThreadRef.set(Thread.currentThread())
-        onSuccess("Done!")
+        resolve("Done!")
         latch.countDown()
       }
         .startOn(Executors.newSingleThreadExecutor())
@@ -226,12 +226,12 @@ class SchedulingTestCase {
     val whenCompleteThreadRef = AtomicReference<Thread>()
     Promise<String, RuntimeException> {
       task1ThreadRef.set(Thread.currentThread())
-      onSuccess("Done")
+      resolve("Done")
       latch.countDown()
     }.then {
       Promise<String, RuntimeException> {
         task2ThreadRef.set(Thread.currentThread())
-        onSuccess("Done!")
+        resolve("Done!")
         latch.countDown()
       }
         .startOn(Executors.newSingleThreadExecutor())

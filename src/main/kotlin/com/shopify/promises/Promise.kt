@@ -46,15 +46,15 @@ typealias PromiseCallback<T, E> = (Promise.Result<T, E>) -> Unit
 /**
  * Action to be performed when [Promise] has been canceled
  *
- * @see Promise.Subscriber.doOnCancel
+ * @see Promise.Subscriber.onCancel
  */
 typealias PromiseCancelDelegate = () -> Unit
 /**
  * A Promise task to be executed
  *
  * Task is responsible to notify about result of its execution. Task is represented by function with [Promise.Subscriber] receiver and
- * after completion it must call either [Promise.Subscriber.onSuccess] to signal success result or [Promise.Subscriber.onError] in case of
- * failure. Passed subscriber as an argument for this task provides [Promise.Subscriber.doOnCancel] function that task can use to register
+ * after completion it must call either [Promise.Subscriber.resolve] to signal success result or [Promise.Subscriber.reject] in case of
+ * failure. Passed subscriber as an argument for this task provides [Promise.Subscriber.onCancel] function that task can use to register
  * any action (such as terminate long running job, clean up resources, etc.) to be performed when [Promise] has been canceled.
  *
  * @see Promise.Subscriber
@@ -83,8 +83,8 @@ class Promise<T, E> private constructor(state: State<T, E>) {
    * Create a new promise that executes provided task
    *
    * Task is represented by a function with a receiver [Promise.Subscriber] that must be used to notify about execution result, it must call
-   * either [Promise.Subscriber.onSuccess] to signal success result or [Promise.Subscriber.onError] in case of failure. Additionally
-   * subscriber provides [Promise.Subscriber.doOnCancel] function that task can use to register any action (such as terminate long running
+   * either [Promise.Subscriber.resolve] to signal success result or [Promise.Subscriber.reject] in case of failure. Additionally
+   * subscriber provides [Promise.Subscriber.onCancel] function that task can use to register any action (such as terminate long running
    * job, clean up resources, etc.) to be performed when this [Promise] has been canceled.
    *
    * Example:
@@ -132,7 +132,7 @@ class Promise<T, E> private constructor(state: State<T, E>) {
    *
    * @return [Promise]`<T, E>`
    * @see PromiseTask
-   * @see Promise.Subscriber.doOnCancel
+   * @see Promise.Subscriber.onCancel
    */
   fun cancel() {
     do {
@@ -161,7 +161,7 @@ class Promise<T, E> private constructor(state: State<T, E>) {
       }
 
       val canceled = AtomicBoolean()
-      doOnCancel {
+      onCancel {
         canceled.set(true)
         cancelDelegate.get().invoke()
       }
@@ -180,8 +180,8 @@ class Promise<T, E> private constructor(state: State<T, E>) {
 
         downStreamPromise.whenComplete {
           when (it) {
-            is Result.Success -> subscriber.onSuccess(it.value)
-            is Result.Error -> subscriber.onError(it.error)
+            is Result.Success -> subscriber.resolve(it.value)
+            is Result.Error -> subscriber.reject(it.error)
           }
         }
       }
@@ -203,15 +203,15 @@ class Promise<T, E> private constructor(state: State<T, E>) {
     val subscriber = object : Promise.Subscriber<T, E> {
       val cancelDelegate = AtomicReference<PromiseCancelDelegate>()
 
-      override fun onSuccess(value: T) {
+      override fun resolve(value: T) {
         complete(Promise.Result.Success(value))
       }
 
-      override fun onError(error: E) {
+      override fun reject(error: E) {
         complete(Promise.Result.Error(error))
       }
 
-      override fun doOnCancel(cancelDelegate: PromiseCancelDelegate) {
+      override fun onCancel(cancelDelegate: PromiseCancelDelegate) {
         this.cancelDelegate.set(cancelDelegate)
       }
     }
@@ -278,21 +278,21 @@ class Promise<T, E> private constructor(state: State<T, E>) {
      *
      * @param value success result
      */
-    fun onSuccess(value: T): Unit
+    fun resolve(value: T): Unit
 
     /**
      * Called when promise task execution finished with failure result
      *
      * @param error failure result
      */
-    fun onError(error: E): Unit
+    fun reject(error: E): Unit
 
     /**
      * Register action to be preformed when promise has been canceled
      *
      * @param cancelDelegate action to be invoked
      */
-    fun doOnCancel(cancelDelegate: PromiseCancelDelegate): Unit
+    fun onCancel(cancelDelegate: PromiseCancelDelegate): Unit
   }
 
   /**

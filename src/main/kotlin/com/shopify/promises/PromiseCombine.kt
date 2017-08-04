@@ -47,7 +47,7 @@ inline fun <reified T, E> Promise.Companion.all(promises: Sequence<Promise<T, E>
       canceled.set(true)
       promiseList.forEach { it.cancel() }
     }
-    doOnCancel(cancel)
+    onCancel(cancel)
 
     val result = Array<Any?>(promiseList.size, { Unit })
     promiseList.forEachIndexed { index, promise ->
@@ -56,11 +56,11 @@ inline fun <reified T, E> Promise.Companion.all(promises: Sequence<Promise<T, E>
       promise.whenComplete {
         when (it) {
           is Promise.Result.Success -> result[index] = it.value as Any?
-          is Promise.Result.Error -> cancel().apply { subscriber.onError(it.error) }
+          is Promise.Result.Error -> cancel().apply { subscriber.reject(it.error) }
         }
 
         if (remainingCount.decrementAndGet() == 0 && !canceled.get()) {
-          subscriber.onSuccess(result.map { it as T }.toTypedArray())
+          subscriber.resolve(result.map { it as T }.toTypedArray())
         }
       }
     }
@@ -163,7 +163,7 @@ inline fun <reified T, E> Promise.Companion.any(promises: Sequence<Promise<T, E>
       canceled.set(true)
       promiseList.forEach { it.cancel() }
     }
-    doOnCancel(cancel)
+    onCancel(cancel)
 
     promiseList.forEach {
       if (canceled.get()) return@forEach
@@ -171,11 +171,11 @@ inline fun <reified T, E> Promise.Companion.any(promises: Sequence<Promise<T, E>
         when (it) {
           is Promise.Result.Success -> {
             cancel()
-            subscriber.onSuccess(it.value)
+            subscriber.resolve(it.value)
           }
           is Promise.Result.Error -> {
             cancel()
-            subscriber.onError(it.error)
+            subscriber.reject(it.error)
           }
         }
       }

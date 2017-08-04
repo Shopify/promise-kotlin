@@ -37,11 +37,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 fun <T, E> Promise<T, E>.startOn(executor: Executor): Promise<T, E> {
   return Promise<Unit, Nothing> {
     val canceled = AtomicBoolean()
-    doOnCancel {
+    onCancel {
       canceled.set(true)
     }
     executor.execute {
-      if (!canceled.get()) onSuccess(Unit)
+      if (!canceled.get()) resolve(Unit)
     }
   }
     .promoteError<Unit, E>()
@@ -58,14 +58,14 @@ fun <T, E> Promise<T, E>.completeOn(executor: Executor): Promise<T, E> {
   return bind { result ->
     Promise<T, E> {
       val canceled = AtomicBoolean()
-      doOnCancel {
+      onCancel {
         canceled.set(true)
       }
       executor.execute {
         if (!canceled.get()) {
           when (result) {
-            is Promise.Result.Success -> onSuccess(result.value)
-            is Promise.Result.Error -> onError(result.error)
+            is Promise.Result.Success -> resolve(result.value)
+            is Promise.Result.Error -> reject(result.error)
           }
         }
       }
