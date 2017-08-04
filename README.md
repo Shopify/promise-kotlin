@@ -31,7 +31,7 @@ As a quick start let's imagine the next scenario, we want to fetch user by id fi
   .then { userId ->
     Promise<User, IOException> {
       val fetchUser: Call = userService.fetchUserById(userId)
-      doOnCancel {
+      onCancel {
         // when Promise.cancel() is called this action will be performed
         // to give you a chance cancel task execution and clean up resources
         fetchUser.cancel()
@@ -40,12 +40,12 @@ As a quick start let's imagine the next scenario, we want to fetch user by id fi
       fetchUser.enqueue(object : Callback {
         override fun onFailure(e: IOException) {
           // notify promise about error
-          onError(e)
+          reject(e)
         }
 
         override fun onResponse(response: User) {
           // notify promise about success
-          onSuccess(response)
+          resolve(response)
         }
       })
     }
@@ -54,7 +54,7 @@ As a quick start let's imagine the next scenario, we want to fetch user by id fi
     // resolved with success
     Promise<List<Repo>, IOException> {
       val fetchUserRepositories: Call = repoService.fetchUserRepositories(user.id)
-      doOnCancel {
+      onCancel {
         // when Promise.cancel() is called this action will be performed
         // to give you a chance cancel task execution and clean up resources
         // any chained promises will get a chance to cancel their task
@@ -65,12 +65,12 @@ As a quick start let's imagine the next scenario, we want to fetch user by id fi
       fetchUserRepositories.enqueue(object : Callback {
         override fun onFailure(e: IOException) {
           // notify promise about error
-          onError(e)
+          reject(e)
         }
 
         override fun onResponse(response: List<Repo>) {
           // notify promise about success
-          onSuccess(response)
+          resolve(response)
         }
       })
     }.map { 
@@ -97,7 +97,7 @@ There are 2 ways to create a `Promise`, provide a task that will do some job:
 ```kotlin
 Promise<User, RuntimeException> {
   val fetchUserRequest = ...;
-  doOnCancel {
+  onCancel {
     // will be called if promise has been canceled
     // it is task responsibility to terminate any internal long running jobs
     // and clean up resources here
@@ -108,10 +108,10 @@ Promise<User, RuntimeException> {
   val user = fetchUserRequest.execute();
   
   // notify about success
-  onSuccess(user) 
+  resolve(user) 
   
   //or report error
-  //onError(RuntimeException("Failed"))
+  //reject(RuntimeException("Failed"))
 }
 ```
 
@@ -134,17 +134,17 @@ To start promise task execution you have to subscribe to it:
 ```kotlin
 Promise<String, RuntimeException> {
   val call = null
-  doOnCancel {
+  onCancel {
     call.cancel()
   }
 
   val result = try {
     call.execute() // long running job
   } catch (e: Exception) {
-    onError(RuntimeException(e))
+    reject(RuntimeException(e))
     return@Promise
   }
-  onSuccess(result)
+  resolve(result)
 }.whenComplete { result: 
   when (it) {
     is Promise.Result.Success -> println("We did it: ${it.value}")
@@ -164,7 +164,7 @@ Promise.ofSuccess<Long, IOException>(100)
   .then { userId ->
     Promise<User, IOException> {
       val fetchUser: Call = userService.fetchUserById(userId)
-      doOnCancel {
+      onCancel {
         // when Promise.cancel() is called this action will be performed
         // to give you a chance cancel task execution and clean up resources
         fetchUser.cancel()
@@ -173,12 +173,12 @@ Promise.ofSuccess<Long, IOException>(100)
       fetchUser.enqueue(object : Callback {
         override fun onFailure(e: IOException) {
           // notify promise about error
-          onError(e)
+          reject(e)
         }
 
         override fun onResponse(response: User) {
           // notify promise about success
-          onSuccess(response)
+          resolve(response)
         }
       })
     }
@@ -187,7 +187,7 @@ Promise.ofSuccess<Long, IOException>(100)
     // resolved with success
     Promise<List<Repo>, IOException> {
       val fetchUserRepositories: Call = repoService.fetchUserRepositories(user.id)
-      doOnCancel {
+      onCancel {
         // when Promise.cancel() is called this action will be performed
         // to give you a chance cancel task execution and clean up resources
         // any chained promises will get a chance to cancel their task
@@ -198,12 +198,12 @@ Promise.ofSuccess<Long, IOException>(100)
       fetchUserRepositories.enqueue(object : Callback {
         override fun onFailure(e: IOException) {
           // notify promise about error
-          onError(e)
+          reject(e)
         }
 
         override fun onResponse(response: List<Repo>) {
           // notify promise about success
-          onSuccess(response)
+          resolve(response)
         }
       })
     }.map { 
@@ -237,7 +237,7 @@ fun <T, E> Promise<T, E>.completeOn(handler: Handler): Promise<T, E> {
   return bind { result ->
     Promise<T, E> {
       val canceled = AtomicBoolean()
-      doOnCancel {
+      onCancel {
         canceled.set(true)
       }
       handler.post {
@@ -274,7 +274,15 @@ Now the job inside promise will be started with the executor we just provided.
 Additionally this micro-framework provides next util functions:
 
 - `Promise#cancel()` signals promise to cancel task execution if it hasn't been completed yet
-- `Promise#onSuccess(action: PromiseSuccessAction)`, `Promise#onSuccess(action: PromiseSuccessAction)` like in Rx it allows to register some action to be performed when this promise resolved with success or failure
+- `Promise#onResolve(block: (T) -> Unit)`, `Promise#onReject(block: (E) -> Unit)` like in Rx it allows to register some action to be performed when this promise resolved with success or failure
 - `Promise#onStart(block: () -> Unit)` allows to register some action to be performed before promise task execution, useful when some initialization is required
 - `Promise.Companion#all(promises: Sequence<Promise>)` creates a `Promise` that will wait until all provided promises are successfully resolved or one of them fails
 - `Promise.Companion#any(promises: Sequence<Promise>)` creates a `Promise` that will be resolved as soon as the first of the provided promises resolved or failed
+
+## Contributions
+
+We welcome contributions. Please follow the steps in our [contributing guidelines](CONTRIBUTING.md).
+
+## License
+
+`Promise-Kotlin` is distributed under MIT license [MIT License](LICENSE).
