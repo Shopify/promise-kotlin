@@ -18,9 +18,9 @@ This implementation of `Promise` provides next key-features:
 - cached, once value computed subsequent calls to `whenComplete` will not trigger async computation again.
 - parameterized with both value and error: `Promise<Int, Error>`
 - implemented as a continuation monad, defines `bind` operator that provides extension point for new custom operators
+- cancelable, `Promise` can be canceled with triggering action if provided in task declaration via `doOnCancel`  
 - very light weight implementation that offers only core functionality but at the same time flexible enough to extend
 - synchronization lock free, uses CAS/atomic operations only
-- built on Kotlin
 
 ## Quick Start
 
