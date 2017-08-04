@@ -273,6 +273,7 @@ Now the job inside promise will be started with the executor we just provided.
 ### Other API
 Additionally this micro-framework provides next util functions:
 
+- `Promise#cancel()` signals promise to cancel task execution if it hasn't been completed yet
 - `Promise#onSuccess(action: PromiseSuccessAction)`, `Promise#onSuccess(action: PromiseSuccessAction)` like in Rx it allows to register some action to be performed when this promise resolved with success or failure
 - `Promise#onStart(block: () -> Unit)` allows to register some action to be performed before promise task execution, useful when some initialization is required
 - `Promise.Companion#all(promises: Sequence<Promise>)` creates a `Promise` that will wait until all provided promises are successfully resolved or one of them fails
