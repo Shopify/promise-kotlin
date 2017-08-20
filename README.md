@@ -1,3 +1,8 @@
+[![GitHub license](https://img.shields.io/badge/license-MIT-lightgrey.svg?maxAge=2592000)](https://raw.githubusercontent.com/Shopify/promise-kotlin/master/LICENSE)
+[![Build Status](https://travis-ci.org/Shopify/promise-kotlin.svg?branch=master)](https://travis-ci.org/Shopify/promise-kotlin)
+[![GitHub release](https://img.shields.io/github/release/Shopify/promise-kotlin.svg)](https://github.com/Shopify/promise-kotlin/releases)
+
+
 # Promise.kt
 
 `Promise` as a pattern is well known in JS world, but it's not so popular among Android folks, maybe because of the fact that we have very powerful `RxJava` library. 
