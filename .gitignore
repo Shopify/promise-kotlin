@@ -6,3 +6,4 @@ local.properties
 generated
 .DS_Store
 Main.kt
+/out
