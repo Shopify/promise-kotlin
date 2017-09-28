@@ -5,5 +5,5 @@ build
 local.properties
 generated
 .DS_Store
-Main.kt
+Playground.kt
 /out
