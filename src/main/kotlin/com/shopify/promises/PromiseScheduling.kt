@@ -26,7 +26,8 @@
 package com.shopify.promises
 
 import java.util.concurrent.Executor
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 /**
  * Schedule execution of this [Promise] on provided executor
@@ -35,17 +36,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @return [Promise]`<T, E>`
  */
 fun <T, E> Promise<T, E>.startOn(executor: Executor): Promise<T, E> {
-  return Promise<Unit, Nothing> {
-    val canceled = AtomicBoolean()
-    onCancel {
-      canceled.set(true)
-    }
-    executor.execute {
-      if (!canceled.get()) resolve(Unit)
-    }
-  }
-    .promoteError<Unit, E>()
-    .then { this }
+  return Promise<Unit, E> {
+    executor.execute { resolve(Unit) }
+  }.then { this }
 }
 
 /**
@@ -57,18 +50,30 @@ fun <T, E> Promise<T, E>.startOn(executor: Executor): Promise<T, E> {
 fun <T, E> Promise<T, E>.completeOn(executor: Executor): Promise<T, E> {
   return bind { result ->
     Promise<T, E> {
-      val canceled = AtomicBoolean()
-      onCancel {
-        canceled.set(true)
-      }
       executor.execute {
-        if (!canceled.get()) {
-          when (result) {
-            is Promise.Result.Success -> resolve(result.value)
-            is Promise.Result.Error -> reject(result.error)
-          }
+        when (result) {
+          is Promise.Result.Success -> resolve(result.value)
+          is Promise.Result.Error -> reject(result.error)
         }
       }
     }
+  }
+}
+
+/**
+ * Delay execution of this [Promise] for specified time
+ *
+ * @param delay the time from now to delay execution
+ * @param timeUnit  the time unit of the delay parameter
+ * @return [Promise]`<T, E>`
+ */
+fun <T, E> Promise<T, E>.delay(delay: Long, timeUnit: TimeUnit, executor: ScheduledExecutorService): Promise<T, E> {
+  return if (delay <= 0) {
+    this.startOn(executor)
+  } else {
+    Promise<Unit, E> {
+      val future = executor.schedule({ resolve(Unit) }, delay, timeUnit)
+      onCancel { future.cancel(true) }
+    }.then { this }
   }
 }
