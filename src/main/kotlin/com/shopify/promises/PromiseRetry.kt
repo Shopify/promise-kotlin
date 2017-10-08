@@ -1,3 +1,26 @@
+/*
+ *   The MIT License (MIT)
+ *
+ *   Copyright (c) 2017 Shopify Inc.
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy
+ *   of this software and associated documentation files (the "Software"), to deal
+ *   in the Software without restriction, including without limitation the rights
+ *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *   copies of the Software, and to permit persons to whom the Software is
+ *   furnished to do so, subject to the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be included in
+ *   all copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *   THE SOFTWARE.
+ */
 package com.shopify.promises
 
 import java.util.concurrent.ScheduledExecutorService
@@ -22,7 +45,7 @@ sealed class RetryPolicy {
   /**
    * Signals to retry [Promise] execution later after some delay
    */
-  class WithDelay(val delay: Long, val timeUnit: TimeUnit) : RetryPolicy() {
+  data class WithDelay(val delay: Long, val timeUnit: TimeUnit) : RetryPolicy() {
     val delayMs = timeUnit.toMillis(delay)
   }
 }
@@ -56,11 +79,11 @@ sealed class DefaultRetryHandler {
 
     fun build(): RetryHandler<out Any, out Any> {
       return { attempt, result ->
-        val delay = delayForAttempt(attempt, timeUnit.toMillis(delay), backoffMultiplier)
+        val delay = delayForAttempt(attempt, delay, backoffMultiplier)
         when {
           (result is Promise.Result.Success) -> RetryPolicy.Cancel
           (maxCount > 0 && attempt > maxCount) -> RetryPolicy.Cancel
-          (delay > 0) -> RetryPolicy.WithDelay(delay, TimeUnit.MILLISECONDS)
+          (delay > 0) -> RetryPolicy.WithDelay(delay, timeUnit)
           else -> RetryPolicy.Immediately
         }
       }
@@ -93,11 +116,11 @@ sealed class DefaultRetryHandler {
 
     fun build(): RetryHandler<T, E> {
       return { attempt, result ->
-        val delay = delayForAttempt(attempt, timeUnit.toMillis(delay), backoffMultiplier)
+        val delay = delayForAttempt(attempt, delay, backoffMultiplier)
         when {
           !condition(result) -> RetryPolicy.Cancel
           (maxCount > 0 && attempt > maxCount) -> RetryPolicy.Cancel
-          (delay > 0) -> RetryPolicy.WithDelay(delay, TimeUnit.MILLISECONDS)
+          (delay > 0) -> RetryPolicy.WithDelay(delay, timeUnit)
           else -> RetryPolicy.Immediately
         }
       }
@@ -154,6 +177,6 @@ fun <T, E> PromiseGenerator<T, E>.retry(executor: ScheduledExecutorService, shou
       .onEach { upstreamPromise.set(it) }
       .onEach { if (canceled.get()) it.cancel() }
       .iterator()
-      .retry(attempt = 0, delay = 0, subscriber = this)
+      .retry(attempt = 1, delay = 0, subscriber = this)
   }
 }

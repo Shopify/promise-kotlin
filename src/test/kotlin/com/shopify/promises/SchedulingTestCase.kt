@@ -267,7 +267,7 @@ class SchedulingTestCase {
   }
 
   @Test(timeout = 6000)
-  fun delay_start_complete() {
+  fun delayStart() {
     val latch = CountDownLatch(1)
     val delayedStart = AtomicBoolean()
     val startTime = System.currentTimeMillis()
@@ -285,7 +285,7 @@ class SchedulingTestCase {
   }
 
   @Test(timeout = 6000)
-  fun delay_start_canceled() {
+  fun cancelDelayedStart() {
     val latch = CountDownLatch(1)
     val executed = AtomicBoolean()
     val promise = Promise<String, RuntimeException> {
@@ -305,7 +305,7 @@ class SchedulingTestCase {
   }
 
   @Test(timeout = 6000)
-  fun delay_complete_complete() {
+  fun delayComplete() {
     val latch = CountDownLatch(1)
     val delayedStart = AtomicBoolean()
     val delayedComplete = AtomicBoolean()
@@ -326,7 +326,7 @@ class SchedulingTestCase {
   }
 
   @Test(timeout = 6000)
-  fun delay_complete_canceled() {
+  fun cancelDelayedComplete() {
     val latch = CountDownLatch(1)
     val delayedStart = AtomicBoolean()
     val delayedComplete = AtomicBoolean()
