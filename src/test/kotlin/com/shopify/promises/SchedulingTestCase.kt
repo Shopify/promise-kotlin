@@ -27,11 +27,15 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 class SchedulingTestCase {
 
-  @Test fun task_in_background() {
+  @Test
+  fun task_in_background() {
     val latch = CountDownLatch(1)
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
@@ -47,7 +51,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isNotEqualTo(mainThread)
   }
 
-  @Test fun task_in_main() {
+  @Test
+  fun task_in_main() {
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
     Promise<String, RuntimeException> {
@@ -57,7 +62,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isEqualTo(mainThread)
   }
 
-  @Test fun on_start_in_background() {
+  @Test
+  fun on_start_in_background() {
     val latch = CountDownLatch(1)
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
@@ -74,7 +80,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isNotEqualTo(mainThread)
   }
 
-  @Test fun on_start_in_main() {
+  @Test
+  fun on_start_in_main() {
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
     Promise<String, RuntimeException> {}
@@ -85,7 +92,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isEqualTo(mainThread)
   }
 
-  @Test fun on_success_in_background() {
+  @Test
+  fun on_success_in_background() {
     val latch = CountDownLatch(1)
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
@@ -102,7 +110,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isNotEqualTo(mainThread)
   }
 
-  @Test fun on_success_in_main() {
+  @Test
+  fun on_success_in_main() {
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
     Promise<String, RuntimeException> { resolve("Done") }
@@ -113,7 +122,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isEqualTo(mainThread)
   }
 
-  @Test fun on_error_in_background() {
+  @Test
+  fun on_error_in_background() {
     val latch = CountDownLatch(1)
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
@@ -130,7 +140,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isNotEqualTo(mainThread)
   }
 
-  @Test fun on_error_in_main() {
+  @Test
+  fun on_error_in_main() {
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
     Promise<String, RuntimeException> { reject(RuntimeException()) }
@@ -141,7 +152,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isEqualTo(mainThread)
   }
 
-  @Test fun when_complete_in_background() {
+  @Test
+  fun when_complete_in_background() {
     val latch = CountDownLatch(1)
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
@@ -157,7 +169,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isNotEqualTo(mainThread)
   }
 
-  @Test fun when_complete_in_main() {
+  @Test
+  fun when_complete_in_main() {
     val threadRef = AtomicReference<Thread>()
     val mainThread = Thread.currentThread()
     Promise<String, RuntimeException> { resolve("Done") }
@@ -168,7 +181,8 @@ class SchedulingTestCase {
     assertThat(threadRef.get()).isEqualTo(mainThread)
   }
 
-  @Test fun task_and_when_complete_in_separate_thread() {
+  @Test
+  fun task_and_when_complete_in_separate_thread() {
     val latch = CountDownLatch(2)
     val taskThreadRef = AtomicReference<Thread>()
     val whenCompleteThreadRef = AtomicReference<Thread>()
@@ -189,7 +203,8 @@ class SchedulingTestCase {
     assertThat(taskThreadRef.get()).isNotEqualTo(whenCompleteThreadRef.get())
   }
 
-  @Test fun when_complete_in_last_task_thread() {
+  @Test
+  fun when_complete_in_last_task_thread() {
     val latch = CountDownLatch(3)
     val task1ThreadRef = AtomicReference<Thread>()
     val task2ThreadRef = AtomicReference<Thread>()
@@ -219,7 +234,8 @@ class SchedulingTestCase {
     assertThat(task1ThreadRef.get()).isNotEqualTo(task2ThreadRef.get())
   }
 
-  @Test fun tasks_and_when_complete_in_separate_thread() {
+  @Test
+  fun tasks_and_when_complete_in_separate_thread() {
     val latch = CountDownLatch(3)
     val task1ThreadRef = AtomicReference<Thread>()
     val task2ThreadRef = AtomicReference<Thread>()
@@ -248,5 +264,88 @@ class SchedulingTestCase {
     assertThat(task1ThreadRef.get()).isNotEqualTo(whenCompleteThreadRef.get())
     assertThat(task2ThreadRef.get()).isNotEqualTo(whenCompleteThreadRef.get())
     assertThat(task1ThreadRef.get()).isNotEqualTo(task2ThreadRef.get())
+  }
+
+  @Test(timeout = 6000)
+  fun delayStart() {
+    val latch = CountDownLatch(1)
+    val delayedStart = AtomicBoolean()
+    val startTime = System.currentTimeMillis()
+    Promise<String, RuntimeException> {
+      delayedStart.set(System.currentTimeMillis() - startTime >= TimeUnit.SECONDS.toMillis(3))
+      resolve("Done")
+    }
+      .delayStart(3, TimeUnit.SECONDS, ScheduledThreadPoolExecutor(1))
+      .whenComplete {
+        latch.countDown()
+      }
+
+    latch.await()
+    assertThat(delayedStart.get()).isTrue()
+  }
+
+  @Test(timeout = 6000)
+  fun cancelDelayedStart() {
+    val latch = CountDownLatch(1)
+    val executed = AtomicBoolean()
+    val promise = Promise<String, RuntimeException> {
+      executed.set(true)
+      resolve("Done")
+    }
+      .delayStart(3, TimeUnit.SECONDS, ScheduledThreadPoolExecutor(1))
+      .whenComplete {
+        latch.countDown()
+      }
+
+    Thread.sleep(TimeUnit.SECONDS.toMillis(1))
+    promise.cancel()
+
+    latch.await(4, TimeUnit.SECONDS)
+    assertThat(executed.get()).isFalse()
+  }
+
+  @Test(timeout = 6000)
+  fun delayComplete() {
+    val latch = CountDownLatch(1)
+    val delayedStart = AtomicBoolean()
+    val delayedComplete = AtomicBoolean()
+    val startTime = System.currentTimeMillis()
+    Promise<String, RuntimeException> {
+      delayedStart.set(System.currentTimeMillis() - startTime >= TimeUnit.SECONDS.toMillis(3))
+      resolve("Done")
+    }
+      .delayComplete(3, TimeUnit.SECONDS, ScheduledThreadPoolExecutor(1))
+      .whenComplete {
+        delayedComplete.set(System.currentTimeMillis() - startTime >= TimeUnit.SECONDS.toMillis(3))
+        latch.countDown()
+      }
+
+    latch.await()
+    assertThat(delayedStart.get()).isFalse()
+    assertThat(delayedComplete.get()).isTrue()
+  }
+
+  @Test(timeout = 6000)
+  fun cancelDelayedComplete() {
+    val latch = CountDownLatch(1)
+    val delayedStart = AtomicBoolean()
+    val delayedComplete = AtomicBoolean()
+    val startTime = System.currentTimeMillis()
+    val promise = Promise<String, RuntimeException> {
+      delayedStart.set(System.currentTimeMillis() - startTime >= TimeUnit.SECONDS.toMillis(3))
+      resolve("Done")
+    }
+      .delayComplete(3, TimeUnit.SECONDS, ScheduledThreadPoolExecutor(1))
+      .whenComplete {
+        delayedComplete.set(System.currentTimeMillis() - startTime >= TimeUnit.SECONDS.toMillis(3))
+        latch.countDown()
+      }
+
+    Thread.sleep(TimeUnit.SECONDS.toMillis(1))
+    promise.cancel()
+
+    latch.await(4, TimeUnit.SECONDS)
+    assertThat(delayedStart.get()).isFalse()
+    assertThat(delayedComplete.get()).isFalse()
   }
 }

@@ -61,19 +61,41 @@ fun <T, E> Promise<T, E>.completeOn(executor: Executor): Promise<T, E> {
 }
 
 /**
+ * Delay dispatching result of this [Promise] for specified time
+ *
+ * @param delay the time from now to delay execution
+ * @param timeUnit  the time unit of the delay parameter
+ * @return [Promise]`<T, E>`
+ */
+fun <T, E> Promise<T, E>.delayComplete(delay: Long, timeUnit: TimeUnit, executor: ScheduledExecutorService): Promise<T, E> {
+  if (delay <= 0) return this.completeOn(executor)
+
+  return this.bind { result ->
+    Promise<T, E> {
+      val dispatch = {
+        when (result) {
+          is Promise.Result.Success -> this.resolve(result.value)
+          is Promise.Result.Error -> this.reject(result.error)
+        }
+      }
+      val future = executor.schedule(dispatch, delay, timeUnit)
+      this.onCancel { future.cancel(true) }
+    }
+  }
+}
+
+/**
  * Delay execution of this [Promise] for specified time
  *
  * @param delay the time from now to delay execution
  * @param timeUnit  the time unit of the delay parameter
  * @return [Promise]`<T, E>`
  */
-fun <T, E> Promise<T, E>.delay(delay: Long, timeUnit: TimeUnit, executor: ScheduledExecutorService): Promise<T, E> {
-  return if (delay <= 0) {
-    this.startOn(executor)
-  } else {
-    Promise<Unit, E> {
-      val future = executor.schedule({ resolve(Unit) }, delay, timeUnit)
-      onCancel { future.cancel(true) }
-    }.then { this }
-  }
+fun <T, E> Promise<T, E>.delayStart(delay: Long, timeUnit: TimeUnit, executor: ScheduledExecutorService): Promise<T, E> {
+  if (delay <= 0) return this.startOn(executor)
+
+  val downStreamPromise = this
+  return Promise.ofSuccess<Unit, E>(Unit)
+    .delayComplete(delay, timeUnit, executor)
+    .then { downStreamPromise }
 }
