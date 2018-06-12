@@ -31,10 +31,10 @@ import java.io.IOException
 class BasicPromiseTestCase {
 
   @Test fun create() {
-    val promise1: Promise<Long, Nothing> = Promise.of(1)
-    val promise2: Promise<String, RuntimeException> = Promise.ofSuccess("success")
-    val promise3: Promise<String, IOException> = Promise.ofError(IOException())
-    val promise4: Promise<String, RuntimeException> = Promise {}
+    Promise.of(1)
+    Promise.ofSuccess<String, RuntimeException>("success")
+    Promise.ofError<String, IOException>(IOException())
+    Promise<String, RuntimeException> {}
   }
 
   @Test fun static_value() {
