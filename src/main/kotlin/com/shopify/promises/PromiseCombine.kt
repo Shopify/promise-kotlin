@@ -49,20 +49,21 @@ inline fun <reified T, E> Promise.Companion.all(promises: Sequence<Promise<T, E>
     }
     onCancel(cancel)
 
-    val result = Array<Any?>(promiseList.size, { Unit })
+    val result = Array<Any?>(promiseList.size) { Unit }
     promiseList.forEachIndexed { index, promise ->
       if (canceled.get()) return@forEachIndexed
 
-      promise.whenComplete {
-        when (it) {
-          is Promise.Result.Success -> result[index] = it.value as Any?
-          is Promise.Result.Error -> cancel().apply { subscriber.reject(it.error) }
+      promise.whenComplete(
+        onResolve = {
+          result[index] = it as Any?
+          if (remainingCount.decrementAndGet() == 0 && !canceled.get()) {
+            subscriber.resolve(result.map { it as T }.toTypedArray())
+          }
+        },
+        onReject = {
+          cancel().apply { subscriber.reject(it) }
         }
-
-        if (remainingCount.decrementAndGet() == 0 && !canceled.get()) {
-          subscriber.resolve(result.map { it as T }.toTypedArray())
-        }
-      }
+      )
     }
   }
 }
@@ -92,7 +93,7 @@ inline fun <reified T, E> Promise.Companion.all(vararg promises: Promise<T, E>):
  * @see Tuple
  */
 @Suppress("UNCHECKED_CAST", "NAME_SHADOWING")
-fun <T1 : Any?, T2 : Any?, E> Promise.Companion.all(p1: Promise<T1, E>, p2: Promise<T2, E>): Promise<Tuple<T1, T2>, E> {
+fun <T1 : Any?, T2 : Any?, E> Promise.Companion.all(p1: Promise<out T1, out E>, p2: Promise<out T2, out E>): Promise<Tuple<T1, T2>, out E> {
   val p1 = p1.map { it as Any? }
   val p2 = p2.map { it as Any? }
   return all<Any?, E>(p1, p2).map {
@@ -168,15 +169,10 @@ inline fun <reified T, E> Promise.Companion.any(promises: Sequence<Promise<T, E>
     promiseList.forEach {
       if (canceled.get()) return@forEach
       it.whenComplete {
+        cancel()
         when (it) {
-          is Promise.Result.Success -> {
-            cancel()
-            subscriber.resolve(it.value)
-          }
-          is Promise.Result.Error -> {
-            cancel()
-            subscriber.reject(it.error)
-          }
+          is Promise.Result.Success -> subscriber.resolve(it.value)
+          is Promise.Result.Error -> subscriber.reject(it.error)
         }
       }
     }

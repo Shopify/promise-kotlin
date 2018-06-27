@@ -48,9 +48,9 @@ inline fun <T, E> Promise<T, E>.onStart(crossinline block: () -> Unit): Promise<
  * @param block to be performed
  * @return [Promise]`<T, E>`
  */
-inline fun <T, E> Promise<T, E>.onResolve(crossinline block: (T) -> Unit): Promise<T, E> {
+inline fun <T, E> Promise<T, E>.onResolve(crossinline onResolve: PromiseOnResolveCallback<T>): Promise<T, E> {
   return then {
-    block(it)
+    onResolve(it)
     Promise.ofSuccess<T, E>(it)
   }
 }
@@ -63,9 +63,9 @@ inline fun <T, E> Promise<T, E>.onResolve(crossinline block: (T) -> Unit): Promi
  * @param block to be performed
  * @return [Promise]`<T, E>`
  */
-inline fun <T, E> Promise<T, E>.onReject(crossinline block: (E) -> Unit): Promise<T, E> {
+inline fun <T, E> Promise<T, E>.onReject(crossinline onReject: PromiseOnRejectCallback<E>): Promise<T, E> {
   return errorThen {
-    block(it)
+    onReject(it)
     Promise.ofError<T, E>(it)
   }
 }

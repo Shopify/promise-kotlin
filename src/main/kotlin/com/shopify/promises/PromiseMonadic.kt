@@ -31,7 +31,7 @@ package com.shopify.promises
  * @param transform transformation function `(T) -> T1`
  * @return [Promise]`<T1, E>`
  */
-inline fun <T, E, T1> Promise<T, out E>.map(crossinline transform: (T) -> T1): Promise<T1, E> {
+inline fun <T, E, T1> Promise<T, out E>.map(crossinline transform: (value: T) -> T1): Promise<T1, E> {
   return bind {
     when (it) {
       is Promise.Result.Error -> Promise.ofError<T1, E>(it.error)
@@ -46,7 +46,7 @@ inline fun <T, E, T1> Promise<T, out E>.map(crossinline transform: (T) -> T1): P
  * @param transform transformation function `(T) -> Promise<T1, E>`
  * @return [Promise]`<T1, E>`
  */
-inline fun <T, E, T1> Promise<T, out E>.then(crossinline transform: (T) -> Promise<T1, E>): Promise<T1, E> {
+inline fun <T, E, T1> Promise<T, out E>.then(crossinline transform: (value: T) -> Promise<T1, E>): Promise<T1, E> {
   return bind {
     when (it) {
       is Promise.Result.Error -> Promise.ofError<T1, E>(it.error)
@@ -61,7 +61,7 @@ inline fun <T, E, T1> Promise<T, out E>.then(crossinline transform: (T) -> Promi
  * @param transform transformation function `(E) -> E1`
  * @return [Promise]`<T, E1>`
  */
-inline fun <T, E, E1> Promise<out T, E>.mapError(crossinline transform: (E) -> E1): Promise<T, E1> {
+inline fun <T, E, E1> Promise<out T, E>.mapError(crossinline transform: (error: E) -> E1): Promise<T, E1> {
   return bind {
     when (it) {
       is Promise.Result.Success -> Promise.ofSuccess<T, E1>(it.value)
@@ -76,7 +76,7 @@ inline fun <T, E, E1> Promise<out T, E>.mapError(crossinline transform: (E) -> E
  * @param transform transformation function `(E) -> Promise<T, E1>`
  * @return [Promise]`<T, E1>`
  */
-inline fun <T, E, E1> Promise<out T, E>.errorThen(crossinline transform: (E) -> Promise<T, E1>): Promise<T, E1> {
+inline fun <T, E, E1> Promise<out T, E>.errorThen(crossinline transform: (error: E) -> Promise<T, E1>): Promise<T, E1> {
   return bind {
     when (it) {
       is Promise.Result.Success -> Promise.ofSuccess<T, E1>(it.value)
