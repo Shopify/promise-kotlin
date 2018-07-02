@@ -51,10 +51,7 @@ fun <T, E> Promise<T, E>.completeOn(executor: Executor): Promise<T, E> {
   return bind { result ->
     Promise<T, E> {
       executor.execute {
-        when (result) {
-          is Promise.Result.Success -> resolve(result.value)
-          is Promise.Result.Error -> reject(result.error)
-        }
+        dispatch(result)
       }
     }
   }
@@ -72,13 +69,7 @@ fun <T, E> Promise<T, E>.delayComplete(delay: Long, timeUnit: TimeUnit, executor
 
   return this.bind { result ->
     Promise<T, E> {
-      val dispatch = {
-        when (result) {
-          is Promise.Result.Success -> this.resolve(result.value)
-          is Promise.Result.Error -> this.reject(result.error)
-        }
-      }
-      val future = executor.schedule(dispatch, delay, timeUnit)
+      val future = executor.schedule({ dispatch(result) }, delay, timeUnit)
       this.onCancel { future.cancel(true) }
     }
   }

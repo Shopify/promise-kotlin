@@ -27,14 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Action to be performed when [Promise] successfully resolved
- */
-typealias PromiseSuccessAction<T> = (T) -> Unit
-/**
- * Action to be performed when [Promise] failed
- */
-typealias PromiseErrorAction<E> = (E) -> Unit
-/**
  * Callback to be notified when [Promise] resolved
  *
  * Provided [Promise.Result]`<T, E>` argument represents the result of [Promise]`<T, E>` execution and it can be either
@@ -42,13 +34,29 @@ typealias PromiseErrorAction<E> = (E) -> Unit
  *
  * @see Promise.Result
  */
-typealias PromiseCallback<T, E> = (Promise.Result<T, E>) -> Unit
+typealias PromiseCallback<T, E> = (result: Promise.Result<T, E>) -> Unit
+
+/**
+ * Callback to be notified when [Promise] resolved with [Promise.Result.Success]
+ *
+ * Provided argument represents the success result of [Promise]`<T, E>` execution
+ */
+typealias PromiseOnResolveCallback<T> = (value: T) -> Unit
+
+/**
+ * Callback to be notified when [Promise] resolved with [Promise.Result.Error]
+ *
+ * Provided argument represents the error result of [Promise]`<T, E>` execution
+ */
+typealias PromiseOnRejectCallback<E> = (error: E) -> Unit
+
 /**
  * Action to be performed when [Promise] has been canceled
  *
  * @see Promise.Subscriber.onCancel
  */
 typealias PromiseCancelDelegate = () -> Unit
+
 /**
  * A Promise task to be executed
  *
@@ -60,12 +68,13 @@ typealias PromiseCancelDelegate = () -> Unit
  * @see Promise.Subscriber
  */
 typealias PromiseTask<T, E> = Promise.Subscriber<T, E>.() -> Unit
+
 /**
  * Function that transforms `(Promise.Result<T, E>) -> Promise<T1, E1>` used by binding operation
  *
  * @see Promise.bind
  */
-typealias PromiseMonadTransformation<T, E, T1, E1> = (Promise.Result<T, E>) -> Promise<T1, E1>
+typealias PromiseMonadTransformation<T, E, T1, E1> = (result: Promise.Result<T, E>) -> Promise<T1, E1>
 
 /**
  * A Promise that can either be resolved with [Promise.Result.Success]`<T, E>` or [Promise.Result.Error]`<T, E>`
@@ -128,6 +137,27 @@ class Promise<T, E> private constructor(state: State<T, E>) {
   }
 
   /**
+   * Start promise task execution
+   *
+   * Result will be delivered via provided [PromiseOnResolveCallback] or [PromiseOnRejectCallback] callbacks.
+   *
+   * @param onResolve to be called when promise succeed
+   * @param onResolve to be called when promise failed
+   * @return [Promise]`<T, E>`
+   * @see Promise.Result.Success
+   * @see Promise.Result.Error
+   */
+  fun whenComplete(onResolve: PromiseOnResolveCallback<T>, onReject: PromiseOnRejectCallback<E>): Promise<T, E> {
+    whenComplete {
+      when (it) {
+        is Promise.Result.Success -> onResolve(it.value)
+        is Promise.Result.Error -> onReject(it.error)
+      }
+    }
+    return this
+  }
+
+  /**
    * Signal promise to cancel task execution if it hasn't been completed yet
    *
    * @return [Promise]`<T, E>`
@@ -179,10 +209,7 @@ class Promise<T, E> private constructor(state: State<T, E>) {
         }
 
         downStreamPromise.whenComplete {
-          when (it) {
-            is Result.Success -> subscriber.resolve(it.value)
-            is Result.Error -> subscriber.reject(it.error)
-          }
+          subscriber.dispatch(it)
         }
       }
     }
@@ -272,27 +299,27 @@ class Promise<T, E> private constructor(state: State<T, E>) {
    *
    * Used by task to notify about its execution result.
    */
-  interface Subscriber<in T, in E> {
+  interface Subscriber<T, E> {
     /**
      * Called when promise task execution finished with success result
      *
      * @param value success result
      */
-    fun resolve(value: T): Unit
+    fun resolve(value: T)
 
     /**
      * Called when promise task execution finished with failure result
      *
      * @param error failure result
      */
-    fun reject(error: E): Unit
+    fun reject(error: E)
 
     /**
      * Register action to be preformed when promise has been canceled
      *
      * @param cancelDelegate action to be invoked
      */
-    fun onCancel(cancelDelegate: PromiseCancelDelegate): Unit
+    fun onCancel(cancelDelegate: PromiseCancelDelegate)
   }
 
   /**
@@ -338,5 +365,12 @@ class Promise<T, E> private constructor(state: State<T, E>) {
      * @return [Promise]`<T, E>`
      */
     fun <T, E> ofError(error: E): Promise<T, E> = Promise(State.Complete(Promise.Result.Error(error)))
+  }
+}
+
+internal fun <T, E> Promise.Subscriber<T, E>.dispatch(result: Promise.Result<T, E>) {
+  when (result) {
+    is Promise.Result.Success -> this.resolve(result.value)
+    is Promise.Result.Error -> this.reject(result.error)
   }
 }
