@@ -257,7 +257,15 @@ class Promise<T, E> private constructor(state: State<T, E>) {
   }
 
   private fun complete(result: Promise.Result<T, E>) {
-    val oldState = state.get() as? State.InProgress ?: return
+    val oldState = state.get()?.let {
+      when (it) {
+        is State.Idle -> throw IllegalStateException("Cannot mark an idle promise as completed.")
+        is State.InProgress -> it
+        is State.Complete -> throw IllegalStateException("Cannot complete a promise twice.")
+        is State.Cancelled -> null
+      }
+    } ?: return
+
     val newState = State.Complete(result)
     if (state.compareAndSet(oldState, newState)) {
       oldState.callbacks.forEach {

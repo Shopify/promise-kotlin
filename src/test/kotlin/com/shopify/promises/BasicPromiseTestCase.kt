@@ -304,6 +304,15 @@ class BasicPromiseTestCase {
     ).validateError(error)
   }
 
+  @Test(expected = IllegalStateException::class) fun resolve_multiple_times() {
+    val promise = Promise<String, RuntimeException> {
+      resolve("first")
+      resolve("second")
+    }
+
+    promise.whenComplete { }
+  }
+
   private fun <T, T1, E> Promise<T, E>.validateMap(expected: T, transform: (T) -> T1): Promise<T1, E> {
     return map {
       assertThat(it).isEqualTo(expected)
