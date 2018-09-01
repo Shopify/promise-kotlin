@@ -32,7 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class CancellationTestCase {
 
-  @Test fun do_on_cancel_task() {
+  @Test
+  fun do_on_cancel_task() {
     val latch = CountDownLatch(1)
     val taskCancelCalled = AtomicBoolean()
     val whenCalled = AtomicBoolean()
@@ -57,7 +58,8 @@ class CancellationTestCase {
     assertThat(whenCalled.get()).isFalse()
   }
 
-  @Test fun then_not_called() {
+  @Test
+  fun then_not_called() {
     val latch = CountDownLatch(1)
     val canceled = AtomicBoolean()
     val thenCalled = AtomicBoolean()
@@ -87,7 +89,8 @@ class CancellationTestCase {
     assertThat(whenCalled.get()).isFalse()
   }
 
-  @Test fun chained_promise_canceled() {
+  @Test
+  fun chained_promise_canceled() {
     val latch = CountDownLatch(1)
     val task1CancelCalled = AtomicBoolean()
     val task2CancelCalled = AtomicBoolean()
@@ -120,7 +123,8 @@ class CancellationTestCase {
     assertThat(whenCalled.get()).isFalse()
   }
 
-  @Test fun static_cancel() {
+  @Test
+  fun static_cancel() {
     val promise = Promise.ofSuccess<String, RuntimeException>("Done")
     promise.cancel()
 
@@ -129,7 +133,8 @@ class CancellationTestCase {
     }
   }
 
-  @Test fun all_canceled() {
+  @Test
+  fun all_canceled() {
     val latch = CountDownLatch(3)
     val task1CancelCalled = AtomicBoolean()
     val task2CancelCalled = AtomicBoolean()
@@ -139,29 +144,22 @@ class CancellationTestCase {
       Promise<String, RuntimeException> {
         onCancel {
           task1CancelCalled.set(true)
+          latch.countDown()
         }
-        Thread.sleep(400)
-        resolve("Done!")
-        latch.countDown()
       }.startOn(Executors.newSingleThreadExecutor()),
       Promise<String, RuntimeException> {
         onCancel {
           task2CancelCalled.set(true)
+          latch.countDown()
         }
-        Thread.sleep(400)
-        resolve("Done!")
-        latch.countDown()
       }.startOn(Executors.newSingleThreadExecutor()),
       Promise<String, RuntimeException> {
         onCancel {
           task3CancelCalled.set(true)
+          latch.countDown()
         }
-        Thread.sleep(400)
-        resolve("Done!")
-        latch.countDown()
       }.startOn(Executors.newSingleThreadExecutor())
-    )
-      .whenComplete { whenCalled.set(true) }
+    ).whenComplete { whenCalled.set(true) }
 
     Thread.sleep(200)
     promise.cancel()

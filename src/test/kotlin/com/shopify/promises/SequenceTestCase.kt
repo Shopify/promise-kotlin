@@ -7,23 +7,13 @@ import org.junit.Test
 class SequenceTestCase {
 
   @Test
-  fun generatePromiseSequenceWithSeedPromiseError() {
-    generatePromiseSequence(Promise.ofError<Int, Throwable>(RuntimeException("boom"))) {
-      Assert.fail("Called when is not supposed to")
-      Promise.ofSuccess(it + 1)
-    }.checkPromiseErrorResult {
-      Truth.assertThat(it).isInstanceOf(RuntimeException::class.java)
-    }
-  }
-
-  @Test
   fun generatePromiseSequenceWithSeedPromiseSuccess() {
     generatePromiseSequence(Promise.ofSuccess<Int, Throwable>(0)) {
       Promise.ofSuccess(it + 1)
     }.checkPromiseSuccessResult {
       it.take(3).forEachIndexed { index, promise ->
         promise.checkPromiseSuccessResult {
-          Truth.assertThat(it).isEqualTo(index + 1)
+          Truth.assertThat(it).isEqualTo(index)
         }
       }
     }
@@ -37,7 +27,7 @@ class SequenceTestCase {
     }.checkPromiseSuccessResult {
       it.take(3).forEachIndexed { index, promise ->
         promise.checkPromiseSuccessResult {
-          Truth.assertThat(it).isEqualTo(index + 1)
+          Truth.assertThat(it).isEqualTo(index)
         }
       }
     }
@@ -77,16 +67,6 @@ class SequenceTestCase {
   }
 
   @Test
-  fun generatePromiseSequenceWithSeedPromiseCanceled() {
-    generatePromiseSequence(Promise.ofSuccess<Int, Throwable>(0).apply { cancel() }) {
-      Assert.fail("Called when is not supposed to")
-      Promise.ofSuccess(it + 1)
-    }.whenComplete {
-      Assert.fail("Called when is not supposed to")
-    }
-  }
-
-  @Test
   fun generatePromiseSequenceWithSeedPromiseNextError() {
     generatePromiseSequence(Promise.ofSuccess<Int, Throwable>(0)) {
       if (it == 0) {
@@ -98,9 +78,12 @@ class SequenceTestCase {
       it.forEachIndexed { index, promise ->
         when (index) {
           0 -> promise.checkPromiseSuccessResult {
-            Truth.assertThat(it).isEqualTo(index + 1)
+            Truth.assertThat(it).isEqualTo(index)
           }
-          1 -> promise.checkPromiseErrorResult { }
+          1 -> promise.checkPromiseSuccessResult {
+            Truth.assertThat(it).isEqualTo(index)
+          }
+          2 -> promise.checkPromiseErrorResult { }
           else -> Assert.fail("Expected only one item")
         }
       }
@@ -123,9 +106,12 @@ class SequenceTestCase {
       it.forEachIndexed { index, promise ->
         when (index) {
           0 -> promise.checkPromiseSuccessResult {
-            Truth.assertThat(it).isEqualTo(index + 1)
+            Truth.assertThat(it).isEqualTo(index)
           }
-          1 -> promise.checkPromiseErrorResult { }
+          1 -> promise.checkPromiseSuccessResult {
+            Truth.assertThat(it).isEqualTo(index)
+          }
+          2 -> promise.checkPromiseErrorResult { }
           else -> Assert.fail("Expected only one item")
         }
       }
@@ -137,7 +123,7 @@ class SequenceTestCase {
     generatePromiseSequence(Promise.ofSuccess<Int, Throwable>(0)) {
       if (it < 4) Promise.ofSuccess(it + 1) else null
     }.then {
-      it.reduce(0) { acc, value -> acc + value }
+      it.reduceAsync(0) { acc, value -> acc + value }
     }.checkPromiseSuccessResult {
       Truth.assertThat(it).isEqualTo(10)
     }

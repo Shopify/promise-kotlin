@@ -26,60 +26,7 @@
 package com.shopify.promises
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 
-/**
- * Create [Promise]`Array<T>, E` that will wait until all provided promises are successfully resolved or one of them fails
- *
- * If one of provided promises failed remaining promises will be terminated and this [Promise] will fail too with the same error.
- * Execution results are kept in order.
- *
- * @param promises sequence of [Promise]`<T, E>` to be executed
- * @return [Promise]`<Array<T>, E>`
- */
-inline fun <reified T, E> Promise.Companion.all(promises: Sequence<Promise<T, E>>): Promise<Array<T>, E> {
-  return Promise {
-    val subscriber = this
-    val promiseList = promises.toList()
-    val remainingCount = AtomicInteger(promiseList.size)
-    val canceled = AtomicBoolean()
-    val cancel = {
-      canceled.set(true)
-      promiseList.forEach { it.cancel() }
-    }
-    onCancel(cancel)
-
-    val result = Array<Any?>(promiseList.size) { Unit }
-    promiseList.forEachIndexed { index, promise ->
-      if (canceled.get()) return@forEachIndexed
-
-      promise.whenComplete(
-        onResolve = {
-          result[index] = it as Any?
-          if (remainingCount.decrementAndGet() == 0 && !canceled.get()) {
-            subscriber.resolve(result.map { it as T }.toTypedArray())
-          }
-        },
-        onReject = {
-          cancel().apply { subscriber.reject(it) }
-        }
-      )
-    }
-  }
-}
-
-/**
- * Create [Promise]`Array<T>, E` that will wait until all provided promises are successfully resolved or one of them fails
- *
- * If one of provided promises failed remaining promises will be terminated and this [Promise] will fail too with the same error.
- * Execution results are kept in order.
- *
- * @param promises array of [Promise]`<T, E>` to be executed
- * @return [Promise]`<Array<T>, E>`
- */
-inline fun <reified T, E> Promise.Companion.all(vararg promises: Promise<T, E>): Promise<Array<T>, E> {
-  return all(promises.asSequence())
-}
 
 /**
  * Create [Promise]`<Tuple<T1, T2>, E>` that will wait until all provided promises are success resolved or one of them fails
@@ -96,7 +43,7 @@ inline fun <reified T, E> Promise.Companion.all(vararg promises: Promise<T, E>):
 fun <T1 : Any?, T2 : Any?, E> Promise.Companion.all(p1: Promise<out T1, out E>, p2: Promise<out T2, out E>): Promise<Tuple<T1, T2>, out E> {
   val p1 = p1.map { it as Any? }
   val p2 = p2.map { it as Any? }
-  return all<Any?, E>(p1, p2).map {
+  return sequenceOf(p1, p2).resolveAll().map {
     Tuple(it[0] as T1, it[1] as T2)
   }
 }
@@ -118,7 +65,7 @@ fun <T1 : Any?, T2 : Any?, T3 : Any?, E> Promise.Companion.all(p1: Promise<T1, E
   val p1 = p1.map { it as Any? }
   val p2 = p2.map { it as Any? }
   val p3 = p3.map { it as Any? }
-  return all<Any?, E>(p1, p2, p3).map {
+  return sequenceOf(p1, p2, p3).resolveAll().map {
     Tuple3(it[0] as T1, it[1] as T2, it[2] as T3)
   }
 }
@@ -142,7 +89,7 @@ fun <T1 : Any?, T2 : Any?, T3 : Any?, T4 : Any?, E> Promise.Companion.all(p1: Pr
   val p2 = p2.map { it as Any? }
   val p3 = p3.map { it as Any? }
   val p4 = p4.map { it as Any? }
-  return all<Any?, E>(p1, p2, p3, p4).map {
+  return sequenceOf(p1, p2, p3, p4).resolveAll().map {
     Tuple4(it[0] as T1, it[1] as T2, it[2] as T3, it[3] as T4)
   }
 }

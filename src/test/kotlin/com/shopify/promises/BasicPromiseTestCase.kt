@@ -212,8 +212,7 @@ class BasicPromiseTestCase {
           resolve("c")
         }
       )
-      .map { it.contentToString() }
-      .validateSuccess("[a, b, c]")
+      .validateSuccess(Tuple3("a", "b", "c"))
   }
 
   @Test fun all_error() {
