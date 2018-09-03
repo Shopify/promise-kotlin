@@ -21,7 +21,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *   THE SOFTWARE.
  */
-@file:JvmName("PromiseMonadic")
+@file:JvmName("PromiseMonadicUtils")
 
 package com.shopify.promises
 

@@ -21,6 +21,8 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *   THE SOFTWARE.
  */
+@file:JvmName("PromiseRetryUtils")
+
 package com.shopify.promises
 
 import java.util.concurrent.ScheduledExecutorService
@@ -36,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference
  * @param scheduledExecutor executor on which delay is waited before the next attempt of [Promise] execution
  * @param next function to provide [Promise] for the next attempt
  */
-fun <T, E> retryPromise(delay: Long, timeUnit: TimeUnit, scheduledExecutor: ScheduledExecutorService, next: () -> Promise<T, E>) =
+fun <T, E> Promise.Companion.retry(delay: Long, timeUnit: TimeUnit, scheduledExecutor: ScheduledExecutorService, next: () -> Promise<T, E>) =
   RetryPromiseBuilder<T, E>(delay, timeUnit, scheduledExecutor, next)
 
 /**
@@ -91,7 +93,6 @@ class RetryPromiseBuilder<T, E> internal constructor(
    * Constructs the promise with incorporated retry execution logic
    */
   fun promise(): Promise<T, E> {
-
 
     fun Iterator<IndexedValue<Promise<T, E>>>.retry(subscriber: Promise.Subscriber<T, E>) {
       if (!hasNext()) return

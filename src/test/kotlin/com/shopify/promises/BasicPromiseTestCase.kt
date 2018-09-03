@@ -30,14 +30,16 @@ import java.io.IOException
 
 class BasicPromiseTestCase {
 
-  @Test fun create() {
+  @Test
+  fun create() {
     Promise.of(1)
     Promise.ofSuccess<String, RuntimeException>("success")
     Promise.ofError<String, IOException>(IOException())
     Promise<String, RuntimeException> {}
   }
 
-  @Test fun static_value() {
+  @Test
+  fun static_value() {
     Promise.of("Done").validateSuccess("Done")
     Promise.ofSuccess<String, RuntimeException>("Done").validateSuccess("Done")
     with(RuntimeException("failed")) {
@@ -46,7 +48,8 @@ class BasicPromiseTestCase {
     Promise<String, RuntimeException> { resolve("Done") }.validateSuccess("Done")
   }
 
-  @Test fun map_same_type() {
+  @Test
+  fun map_same_type() {
     Promise<String, RuntimeException> {
       resolve("Done")
     }.validateMap("Done") {
@@ -54,7 +57,8 @@ class BasicPromiseTestCase {
     }.validateSuccess("Done!")
   }
 
-  @Test fun map_different_type() {
+  @Test
+  fun map_different_type() {
     Promise<String, RuntimeException> {
       resolve("Done")
     }.validateMap("Done") {
@@ -62,7 +66,8 @@ class BasicPromiseTestCase {
     }.validateSuccess(true)
   }
 
-  @Test fun then_same_type() {
+  @Test
+  fun then_same_type() {
     Promise<String, RuntimeException> {
       resolve("Done")
     }.validateThen("Done") {
@@ -70,7 +75,8 @@ class BasicPromiseTestCase {
     }.validateSuccess("Done!")
   }
 
-  @Test fun then_different_type() {
+  @Test
+  fun then_different_type() {
     Promise<String, RuntimeException> {
       resolve("Done")
     }.validateThen("Done") {
@@ -78,7 +84,8 @@ class BasicPromiseTestCase {
     }.validateSuccess(true)
   }
 
-  @Test fun map_error_same_type() {
+  @Test
+  fun map_error_same_type() {
     val error1 = RuntimeException("failed")
     val error2 = RuntimeException("failed!")
     Promise<String, RuntimeException> {
@@ -88,7 +95,8 @@ class BasicPromiseTestCase {
     }.validateError(error2)
   }
 
-  @Test fun map_error_different_type() {
+  @Test
+  fun map_error_different_type() {
     val error1 = RuntimeException("failed")
     val error2 = IOException("failed!")
     Promise<String, RuntimeException> {
@@ -98,7 +106,8 @@ class BasicPromiseTestCase {
     }.validateError(error2)
   }
 
-  @Test fun error_then_same_type() {
+  @Test
+  fun error_then_same_type() {
     val error1 = RuntimeException("failed")
     val error2 = RuntimeException("failed!")
     Promise<String, RuntimeException> {
@@ -108,7 +117,8 @@ class BasicPromiseTestCase {
     }.validateError(error2)
   }
 
-  @Test fun error_then_different_type() {
+  @Test
+  fun error_then_different_type() {
     val error1 = RuntimeException("failed")
     val error2 = IOException("failed!")
     Promise<String, RuntimeException> {
@@ -118,7 +128,8 @@ class BasicPromiseTestCase {
     }.validateError(error2)
   }
 
-  @Test fun on_start() {
+  @Test
+  fun on_start() {
     var onStart = false
     Promise<String, RuntimeException> {
       assertThat(onStart).isTrue()
@@ -130,7 +141,8 @@ class BasicPromiseTestCase {
     }
   }
 
-  @Test fun on_start_static_value() {
+  @Test
+  fun on_start_static_value() {
     var onStart = false
     Promise
       .of("Done")
@@ -140,7 +152,8 @@ class BasicPromiseTestCase {
       }
   }
 
-  @Test fun on_start_nested() {
+  @Test
+  fun on_start_nested() {
     var onStart1 = false
     var onStart2 = false
     Promise<String, RuntimeException> {
@@ -161,7 +174,8 @@ class BasicPromiseTestCase {
     }
   }
 
-  @Test fun on_success() {
+  @Test
+  fun on_success() {
     var onSuccess = false
     Promise<String, RuntimeException> {
       resolve("Done")
@@ -172,7 +186,8 @@ class BasicPromiseTestCase {
     }
   }
 
-  @Test fun on_success_static_value() {
+  @Test
+  fun on_success_static_value() {
     var onSuccess = false
     Promise<String, RuntimeException> {
       resolve("Done")
@@ -183,7 +198,8 @@ class BasicPromiseTestCase {
     }
   }
 
-  @Test fun ignore_error() {
+  @Test
+  fun ignore_error() {
     Promise<String, RuntimeException> {
       reject(RuntimeException())
     }.ignoreError().whenComplete {
@@ -191,7 +207,8 @@ class BasicPromiseTestCase {
     }
   }
 
-  @Test fun ignore_error_static_value() {
+  @Test
+  fun ignore_error_static_value() {
     Promise.ofError<String, RuntimeException>(RuntimeException())
       .ignoreError()
       .whenComplete {
@@ -199,23 +216,25 @@ class BasicPromiseTestCase {
       }
   }
 
-  @Test fun all_success() {
-    Promise
-      .all(
-        Promise<String, RuntimeException> {
-          resolve("a")
-        },
-        Promise<String, RuntimeException> {
-          resolve("b")
-        },
-        Promise<String, RuntimeException> {
-          resolve("c")
-        }
-      )
-      .validateSuccess(Tuple3("a", "b", "c"))
+  @Test
+  fun all_success() {
+    Promise.all(
+      Promise<String, RuntimeException> {
+        resolve("a")
+      },
+      Promise<String, RuntimeException> {
+        resolve("b")
+      },
+      Promise<String, RuntimeException> {
+        resolve("c")
+      }
+    )
+      .map { it.joinToString(separator = "") }
+      .validateSuccess("abc")
   }
 
-  @Test fun all_error() {
+  @Test
+  fun all_error() {
     val error = RuntimeException("Failed")
     Promise
       .all(
@@ -232,7 +251,8 @@ class BasicPromiseTestCase {
       .validateError(error)
   }
 
-  @Test fun all_heterogeneous_2() {
+  @Test
+  fun all_heterogeneous_2() {
     Promise.all(
       Promise<String, RuntimeException> {
         resolve("a")
@@ -243,7 +263,8 @@ class BasicPromiseTestCase {
     ).validateSuccess(Tuple<String, Long>("a", 1))
   }
 
-  @Test fun all_heterogeneous_3() {
+  @Test
+  fun all_heterogeneous_3() {
     Promise.all(
       Promise<String, RuntimeException> {
         resolve("a")
@@ -257,7 +278,8 @@ class BasicPromiseTestCase {
     ).validateSuccess(Tuple3<String, Long, Boolean>("a", 1, true))
   }
 
-  @Test fun all_heterogeneous_4() {
+  @Test
+  fun all_heterogeneous_4() {
     Promise.all(
       Promise<String, RuntimeException> {
         resolve("a")
@@ -274,7 +296,8 @@ class BasicPromiseTestCase {
     ).validateSuccess(Tuple4<String, Long, Boolean, Double>("a", 1, true, 1.5))
   }
 
-  @Test fun any() {
+  @Test
+  fun any() {
     Promise.any(
       Promise<String, RuntimeException> {
         resolve("a")
@@ -288,7 +311,8 @@ class BasicPromiseTestCase {
     ).validateSuccess("a")
   }
 
-  @Test fun any_error() {
+  @Test
+  fun any_error() {
     val error = RuntimeException("Failed")
     Promise.any(
       Promise<String, RuntimeException> {
@@ -303,7 +327,8 @@ class BasicPromiseTestCase {
     ).validateError(error)
   }
 
-  @Test(expected = IllegalStateException::class) fun resolve_multiple_times() {
+  @Test(expected = IllegalStateException::class)
+  fun resolve_multiple_times() {
     val promise = Promise<String, RuntimeException> {
       resolve("first")
       resolve("second")

@@ -32,7 +32,7 @@ class RetryTestCase {
   @Test
   fun retryCountEqualsPromiseGeneratedCount() {
     var generatedPromiseCount = 0
-    retryPromise<String, RuntimeException>(2, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
+    Promise.retry<String, RuntimeException>(2, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
       generatedPromiseCount++
       Promise.ofError(RuntimeException("boom"))
     }.maxAttempts(4)
@@ -49,7 +49,7 @@ class RetryTestCase {
       Truth.assertThat(timeUnit).isEqualTo(TimeUnit.MILLISECONDS)
       Truth.assertThat(delay).isEqualTo(TimeUnit.SECONDS.toMillis(2))
     }
-    retryPromise<String, RuntimeException>(2, TimeUnit.SECONDS, scheduler) {
+    Promise.retry<String, RuntimeException>(2, TimeUnit.SECONDS, scheduler) {
       Promise.ofError(RuntimeException("boom"))
     }.maxAttempts(2)
       .promise()
@@ -65,7 +65,7 @@ class RetryTestCase {
       Truth.assertThat(timeUnit).isEqualTo(TimeUnit.MILLISECONDS)
       Truth.assertThat(delay).isEqualTo(delayForAttempt(generatedPromiseCount - 1, TimeUnit.SECONDS.toMillis(2), 1.2f))
     }
-    retryPromise<String, RuntimeException>(2, TimeUnit.SECONDS, scheduler) {
+    Promise.retry<String, RuntimeException>(2, TimeUnit.SECONDS, scheduler) {
       generatedPromiseCount++
       Promise.ofError(RuntimeException("boom"))
     }.maxAttempts(4)
@@ -79,7 +79,7 @@ class RetryTestCase {
   @Test
   fun errorCondition() {
     var generatedPromiseCount = 0
-    retryPromise<String, RuntimeException>(2, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
+    Promise.retry<String, RuntimeException>(2, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
       if (generatedPromiseCount++ == 4) {
         Promise.ofError(IllegalStateException("boom"))
       } else {
@@ -99,7 +99,7 @@ class RetryTestCase {
   @Test
   fun successCondition() {
     var generatedPromiseCount = 0
-    retryPromise<Int, RuntimeException>(2, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
+    Promise.retry<Int, RuntimeException>(2, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
       Promise.ofSuccess(generatedPromiseCount++)
     }.maxAttempts(10)
       .ifSuccess { it < 4 }
@@ -115,7 +115,7 @@ class RetryTestCase {
   @Test
   fun successAndErrorCondition() {
     var generatedPromiseCount = 0
-    retryPromise<Int, RuntimeException>(2, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
+    Promise.retry<Int, RuntimeException>(2, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
       generatedPromiseCount++
       if (generatedPromiseCount < 4) {
         Promise.ofError(NullPointerException("boom"))
@@ -141,7 +141,7 @@ class RetryTestCase {
 
     var retryPromise: Promise<String, RuntimeException>? = null
 
-    retryPromise = retryPromise(1, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
+    retryPromise = Promise.retry(1, TimeUnit.SECONDS, MockScheduledThreadPoolExecutor()) {
       generatedPromiseCount++
 
       if (generatedPromiseCount == maxRetryCount) {
