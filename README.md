@@ -314,6 +314,15 @@ Promise.all(promises).whenComplete {
 
 ```
 
+
+### Gradle Integration
+
+```
+implementation 'com.shopify.promises:promises:0.0.8'
+```
+
+You can see the [lastest version in Bintray](https://bintray.com/shopify/shopify-android/Promises) 
+
 ### Other API
 Additionally this micro-framework provides next util functions:
 
