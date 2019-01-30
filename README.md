@@ -275,6 +275,45 @@ Promise<User, IOException> {
 ```
 Now the job inside promise will be started with the executor we just provided.
 
+### Groups
+There are circunstances where you would like to handle a *cluster* of promises. `Promise.all()` receive as argument a collection of promises, it will return on success an array of results and on failure will return the first rejected value (indicated on that promise).
+
+Let's imagine we have a list of users ids and we want to know the latest activity for each user.
+
+```
+val ids = mutableListOf(1, 2, 3, 4)
+val promises : mutableListOf(Promises<List<UserActivity>, IOException>)
+ids.map{
+	val promise = Promise<List<UserActivity>, IOException> {
+			//Remember to handle cancel
+			try {
+				//it is our user id
+				val lastActivity = fetchLatestActivity(it).execute()
+				resolve(lastActivity)
+			} catch (e : IOException) {
+				reject(e)
+			}
+	}
+}
+//After ids iteration we have a list of promises, we have to susbcribe now
+Promise.all(promises).whenComplete {
+	//You can use reserved word it, this is for clarification
+	result: Promise.Result<Array<List<UserActivity>>, Int>
+	when (result) {
+		is Promise.Result.Success<Array<List<UserActivity>>, Int> -> {
+			//Every promise success value was a list, we have an array of lists
+			val arrayOfLists : <Array<List<UserActivity>> = result.value
+			//You now can iterate, save it to the database
+		}
+		is Promise.Result.Error<Array<List<UserActivity>>, Int> -> {
+			//This is the error of the first promise to fail
+			Log.d("SHOPIFY_PROMISE", "request fail", result.error)
+		}
+	}
+}
+
+```
+
 ### Other API
 Additionally this micro-framework provides next util functions:
 
