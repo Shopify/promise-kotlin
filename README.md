@@ -294,6 +294,7 @@ ids.map{
 				reject(e)
 			}
 	}
+	promises.add(promise)
 }
 //After ids iteration we have a list of promises, we have to susbcribe now
 Promise.all(promises).whenComplete {
