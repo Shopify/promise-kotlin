@@ -319,10 +319,10 @@ Promise.all(promises).whenComplete {
 ### Gradle Integration
 
 ```
-implementation 'com.shopify.promises:promises:0.0.8'
+implementation 'com.shopify.promises:promises:0.0.9'
 ```
 
-You can see the [lastest version in Bintray](https://bintray.com/shopify/shopify-android/Promises) 
+Version `0.0.9` and beyond are available through Maven Central. Previous versions remain available through [JCenter](https://bintray.com/shopify/shopify-android/Promises).
 
 ### Other API
 Additionally this micro-framework provides next util functions:
