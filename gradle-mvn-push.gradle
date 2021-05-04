@@ -15,104 +15,97 @@
  */
 apply plugin: 'maven'
 apply plugin: 'signing'
-apply plugin: 'com.jfrog.bintray'
 
-version = POM_VERSION_NAME
-group = POM_GROUP_ID
+ext {
+  pom = [
+    publishedGroupId  : 'com.shopify.promises',
+    artifact          : 'promises',
+    libraryName       : 'Promises',
+    libraryDescription: 'Lightweight implementation of promise design pattern on Kotlin',
+    siteUrl           : 'https://github.com/Shopify/promise-kotlin',
+    gitUrl            : 'https://github.com/Shopify/promise-kotlin.git',
+    licenseName       : 'The MIT License',
+    licenseUrl        : 'https://opensource.org/licenses/MIT',
+    author            : 'Shopify Inc.'
+  ]
+}
 
-afterEvaluate { project ->
-  uploadArchives {
-    repositories {
-      mavenInstaller {
-        pom.groupId = POM_GROUP_ID
-        pom.artifactId = POM_ARTIFACT_ID
-        pom.version = POM_VERSION_NAME
+
+version = '0.0.9'
+group = project.ext.pom.publishedGroupId
+
+signing {
+  required { gradle.taskGraph.hasTask("uploadArchives") }
+  def signingKeyId = findProperty("signingKeyId")
+  def signingKey = findProperty("signingKey")
+  def signingPassword = findProperty("signingPassword")
+  useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+  sign configurations.archives
+}
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+        authentication(userName: System.getenv("OSSRH_USERNAME"), password: System.getenv("OSSRH_PASSWORD"))
       }
-    }
-  }
 
-  install {
-    repositories.mavenInstaller {
-      pom.groupId = POM_GROUP_ID
-      pom.artifactId = POM_ARTIFACT_ID
-      pom.version = POM_VERSION_NAME
+      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+        authentication(userName: System.getenv("OSSRH_USERNAME"), password: System.getenv("OSSRH_PASSWORD"))
+      }
 
       pom.project {
-        name POM_NAME
-        packaging POM_PACKAGING
-        description POM_DESCRIPTION
-        url POM_URL
+        groupId project.ext.pom.publishedGroupId
+        artifactId project.ext.pom.artifact
 
-        scm {
-          connection POM_SCM_CONNECTION
-          developerConnection POM_SCM_DEV_CONNECTION
-          url POM_SCM_URL
+        name project.ext.pom.libraryName
+        description project.ext.pom.libraryDescription
+        url project.ext.pom.siteUrl
+
+        developers {
+          developer {
+            name project.ext.pom.author
+          }
         }
 
         licenses {
           license {
-            name POM_LICENCE_NAME
-            url POM_LICENCE_URL
+            name project.ext.pom.licenseName
+            url project.ext.pom.licenseUrl
           }
         }
 
-        developers {
-          developer {
-            id POM_DEVELOPER_ID
-            name POM_DEVELOPER_NAME
-          }
+        scm {
+          connection = project.ext.pom.gitUrl
+          developerConnection = project.ext.pom.gitUrl
+          url = project.ext.pom.siteUrl
         }
       }
     }
   }
+}
 
-  task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-  }
+task sourcesJar(type: Jar, dependsOn: classes) {
+  classifier = 'sources'
+  from sourceSets.main.allSource
+}
 
-  task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-  }
+task javadocJar(type: Jar, dependsOn: javadoc) {
+  classifier = 'javadoc'
+  from javadoc.destinationDir
+}
 
-  if (JavaVersion.current().isJava8Compatible()) {
-    allprojects {
-      tasks.withType(Javadoc) {
-        options.addStringOption('Xdoclint:none', '-quiet')
-      }
+if (JavaVersion.current().isJava8Compatible()) {
+  allprojects {
+    tasks.withType(Javadoc) {
+      options.addStringOption('Xdoclint:none', '-quiet')
     }
-  }
-
-  artifacts {
-    archives sourcesJar
-    archives javadocJar
   }
 }
 
-File localProperties = project.rootProject.file('local.properties')
-Properties properties = new Properties()
-if (localProperties.exists()) {
-  properties.load(localProperties.newDataInputStream())
-}
-
-bintray {
-  user = properties.getProperty("bintray.user")
-  key = properties.getProperty("bintray.apikey")
-
-  configurations = ['archives']
-  pkg {
-    userOrg = POM_DEVELOPER_ID
-    repo = POM_REPO
-    name = POM_NAME
-    desc = POM_DESCRIPTION
-    websiteUrl = POM_URL
-    vcsUrl = POM_SCM_URL
-    licenses = [POM_LICENCE_NAME]
-    publish = true
-    publicDownloadNumbers = true
-    version {
-      desc = POM_DESCRIPTION
-    }
-  }
+artifacts {
+  archives sourcesJar
+  archives javadocJar
 }
